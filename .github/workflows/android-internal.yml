@@ -8,6 +8,7 @@ on:
 jobs:
   build-android-internal:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     steps:
       - name: 📦 Checkout del repositorio
@@ -53,3 +54,4 @@ jobs:
           packageName: com.teranov.zentiapp
           releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
           track: internal
+          verbose: true
