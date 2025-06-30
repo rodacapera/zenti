@@ -9,15 +9,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: 🧾 Checkout del repositorio
+        uses: actions/checkout@v3
 
-      - name: ⬇️ Usar Node compatible con dependencias
+      - name: 🧱 Configurar Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20.18.1'
+          node-version: '20.18.1' # compatible con undici
 
-      - name: 📦 Instalar dependencias
-        run: npm ci
+      - name: 📦 Instalar dependencias con Yarn
+        run: yarn install --frozen-lockfile
 
       - name: ☕ Configurar Java
         uses: actions/setup-java@v3
@@ -32,10 +33,10 @@ jobs:
           versionCode: ${{ github.run_number }}
           versionName: 1.0.${{ github.run_number }}
 
-      - name: 🏗️ Build Android App Bundle
+      - name: 🏗️ Build Android App Bundle (.aab)
         run: cd android && ./gradlew bundleRelease
 
-      - name: 🚀 Upload aab to Google Play
+      - name: 🚀 Subir .aab a Google Play Console
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.SERVICE_ACCOUNT_JSON }}

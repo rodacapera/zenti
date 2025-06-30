@@ -1,30 +1,75 @@
-name: 🍏 iOS CI/CD (Manual)
+name: 🍏 iOS CI/CD
 
 on:
-  workflow_dispatch:
-    inputs:
-      run_ios:
-        description: '¿Desplegar a TestFlight?'
-        required: true
-        default: 'no'
-        type: choice
-        options:
-          - yes
-          - no
+  push:
+    branches: [main]
 
 jobs:
   build-ios:
-    if: ${{ github.event.inputs.run_ios == 'yes' }}
-    runs-on: macos-14
+    runs-on: macos-latest
+    timeout-minutes: 30
+
     steps:
-      - uses: actions/checkout@v3
-      - uses: ruby/setup-ruby@v3;
-        with: { ruby-version: '3.2' }
-      - run: gem install bundler
-      - run: cd ios && bundle install && bundle exec pod install
-      - run: bundle exec fastlane ios beta
+      - name: 📥 Checkout del código
+        uses: actions/checkout@v3
+
+      - name: 🔧 Configurar Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.18.1'
+
+      - name: 📦 Instalar dependencias con Yarn
+        run: yarn install --frozen-lockfile
+
+      - name: ☕ Configurar Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
+      - name: 🔢 Bump versionCode y versionName
+        uses: chkfung/android-version-actions@v1.2.2
+        with:
+          gradlePath: android/app/build.gradle
+          versionCode: ${{ github.run_number }}
+          versionName: 1.0.${{ github.run_number }}
+
+      - name: 🔐 Importar certificado y perfil de aprovisionamiento
         env:
-          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
-          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
-          APP_STORE_CONNECT_API_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
-          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
+          IOS_PROFILE_BASE64: ${{ secrets.IOS_PROFILE_BASE64 }}
+          IOS_CERT_PASSWORD: ${{ secrets.IOS_CERT_PASSWORD }}
+        run: |
+          mkdir -p ~/certs
+          echo "$IOS_CERTIFICATE_BASE64" | base64 --decode > ~/certs/cert.p12
+          echo "$IOS_PROFILE_BASE64" | base64 --decode > ~/certs/profile.mobileprovision
+          security create-keychain -p "github" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "github" build.keychain
+          security import ~/certs/cert.p12 -k build.keychain -P "$IOS_CERT_PASSWORD" -T /usr/bin/codesign
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp ~/certs/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+
+      - name: 🏗️ Build iOS App
+        run: |
+          cd ios
+          xcodebuild -workspace Zenti.xcworkspace \
+            -scheme Zenti \
+            -sdk iphoneos \
+            -configuration Release \
+            -archivePath $PWD/build/Zenti.xcarchive \
+            archive
+
+      - name: 📦 Export .ipa
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath ios/build/Zenti.xcarchive \
+            -exportOptionsPlist ios/exportOptions.plist \
+            -exportPath ios/build
+
+      - name: 🚀 Subir a TestFlight
+        uses: appleboy/app-store-release-action@v1.1.1
+        with:
+          username: ${{ secrets.APP_STORE_CONNECT_USERNAME }}
+          password: ${{ secrets.APP_STORE_CONNECT_PASSWORD }}
+          app_path: ios/build/Zenti.ipa
