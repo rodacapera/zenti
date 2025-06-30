@@ -37,14 +37,19 @@ android {
         // Firma condicional para producción
         release {
             // Read the variables from the environment or from gradle.properties
-            def path = System.getenv("RELEASE_KEYSTORE_PATH") ?: project.findProperty("RELEASE_KEYSTORE_PATH")
-            def pwd = System.getenv("RELEASE_KEYSTORE_PASSWORD") ?: project.findProperty("RELEASE_KEYSTORE_PASSWORD")
-            def alias = System.getenv("RELEASE_KEY_ALIAS") ?: project.findProperty("RELEASE_KEY_ALIAS")
-            def keyPwd = System.getenv("RELEASE_KEY_PASSWORD") ?: project.findProperty("RELEASE_KEY_PASSWORD")
+            // def path = project.hasProperty("RELEASE_KEYSTORE_PATH") ?: project.findProperty("RELEASE_KEYSTORE_PATH")
+            // def pwd = project.hasProperty("RELEASE_KEYSTORE_PASSWORD") ?: project.findProperty("RELEASE_KEYSTORE_PASSWORD")
+            // def alias = project.hasProperty("RELEASE_KEY_ALIAS") ?: project.findProperty("RELEASE_KEY_ALIAS")
+            // def keyPwd = project.hasProperty("RELEASE_KEY_PASSWORD") ?: project.findProperty("RELEASE_KEY_PASSWORD")
+
+            def path  = project.hasProperty('RELEASE_KEYSTORE_PATH') ? project.property('RELEASE_KEYSTORE_PATH') : null
+            def pwd = project.hasProperty('RELEASE_KEYSTORE_PASSWORD') ? project.property('RELEASE_KEYSTORE_PASSWORD') : null
+            def alias = project.hasProperty('RELEASE_KEY_ALIAS') ? project.property('RELEASE_KEY_ALIAS') : null
+            def keyPwd = project.hasProperty('RELEASE_KEY_PASSWORD') ? project.property('RELEASE_KEY_PASSWORD') : null
 
             // If exists, use the variables
             if (path && pwd && alias && keyPwd) {
-                storeFile = file(path)
+                storeFile = file("${rootDir}/${path}")
                 storePassword = pwd
                 keyAlias = alias
                 keyPassword=  keyPwd
