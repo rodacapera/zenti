@@ -37,10 +37,10 @@ android {
         // Firma condicional para producción
         release {
             // Read the variables from the environment or from gradle.properties
-            def path = System.getenv("RELEASE_KEYSTORE_PATH") ?: RELEASE_KEYSTORE_PATH
-            def pwd = System.getenv("RELEASE_KEYSTORE_PASSWORD") ?: RELEASE_KEYSTORE_PASSWORD
-            def alias = System.getenv("RELEASE_KEY_ALIAS") ?: RELEASE_KEY_ALIAS
-            def keyPwd = System.getenv("RELEASE_KEY_PASSWORD") ?: RELEASE_KEY_PASSWORD
+            def path = System.getenv("RELEASE_KEYSTORE_PATH") ?: project.findProperty("RELEASE_KEYSTORE_PATH")
+            def pwd = System.getenv("RELEASE_KEYSTORE_PASSWORD") ?: project.findProperty("RELEASE_KEYSTORE_PASSWORD")
+            def alias = System.getenv("RELEASE_KEY_ALIAS") ?: project.findProperty("RELEASE_KEY_ALIAS")
+            def keyPwd = System.getenv("RELEASE_KEY_PASSWORD") ?: project.findProperty("RELEASE_KEY_PASSWORD")
 
             // If exists, use the variables
             if (path && pwd && alias && keyPwd) {
