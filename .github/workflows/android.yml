@@ -3,6 +3,7 @@ name: ✅ Android CI/CD
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   build-android:
@@ -15,16 +16,28 @@ jobs:
       - name: 🧱 Configurar Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20.18.1' # compatible con undici
+          node-version: '20.18.1'
 
-      - name: 📦 Instalar dependencias con Yarn
+      - name: ♻️ Cache de dependencias Yarn
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/yarn
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: 📦 Instalar dependencias
         run: yarn install --frozen-lockfile
 
-      - name: ☕ Configurar Java
+      - name: ✅ Verificar lint
+        run: yarn lint
+
+      - name: ☕ Configurar Java 17
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
-          java-version: '11'
+          java-version: '17'
 
       - name: 🔢 Bump versionCode y versionName
         uses: chkfung/android-version-actions@v1.2.2
@@ -33,10 +46,10 @@ jobs:
           versionCode: ${{ github.run_number }}
           versionName: 1.0.${{ github.run_number }}
 
-      - name: 🏗️ Build Android App Bundle (.aab)
+      - name: 🏗️ Compilar Android App Bundle (.aab)
         run: cd android && ./gradlew bundleRelease
 
-      - name: 🚀 Subir .aab a Google Play Console
+      - name: 🚀 Subir a Google Play Console (track_internal)
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.SERVICE_ACCOUNT_JSON }}
