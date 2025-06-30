@@ -1,0 +1,3 @@
+/Users/rhonaldcapera/Documents/zenti/repo/zenti/android/app/.cxx/RelWithDebInfo/574f564q/x86_64/CMakeFiles/appmodules.dir
+/Users/rhonaldcapera/Documents/zenti/repo/zenti/android/app/.cxx/RelWithDebInfo/574f564q/x86_64/CMakeFiles/edit_cache.dir
+/Users/rhonaldcapera/Documents/zenti/repo/zenti/android/app/.cxx/RelWithDebInfo/574f564q/x86_64/CMakeFiles/rebuild_cache.dir
