@@ -1,19 +1,19 @@
-name: ✅ Android CI/CD
+name: 🤖 Android CI/CD - Internal Testing
 
 on:
   push:
-    branches: [main]
+    branches: [develop]
   workflow_dispatch:
 
 jobs:
-  build-android:
+  build-android-internal:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 🧾 Checkout del repositorio
+      - name: 📦 Checkout del repositorio
         uses: actions/checkout@v3
 
-      - name: 🧱 Configurar Node.js
+      - name: 🔧 Configurar Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '20.18.1'
@@ -27,11 +27,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-yarn-
 
-      - name: 📦 Instalar dependencias
+      - name: 📥 Instalar dependencias
         run: yarn install --frozen-lockfile
-
-      # - name: ✅ Verificar lint
-      #   run: yarn lint
 
       - name: ☕ Configurar Java 17
         uses: actions/setup-java@v3
@@ -46,20 +43,10 @@ jobs:
           versionCode: ${{ github.run_number }}
           versionName: 1.0.${{ github.run_number }}
 
-      # 🔐 Configuración de firma para producción (comentado por ahora)
-      # - name: 🔐 Restaurar archivo .keystore
-      #   run: |
-      #     echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/my-release-key.keystore
-
-      # 👉 Asegúrate de tener estas variables en tu archivo `gradle.properties` o como `env`:
-      #     KEYSTORE_PASSWORD
-      #     KEY_ALIAS
-      #     KEY_PASSWORD
-
-      - name: 🏗️ Compilar Android App Bundle (.aab)
+      - name: 🛠️ Compilar .aab (debug signing)
         run: cd android && ./gradlew bundleRelease
 
-      - name: 🚀 Subir a Google Play Console (track_internal)
+      - name: 🚀 Subir a Google Play Console - INTERNAL
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.SERVICE_ACCOUNT_JSON }}
