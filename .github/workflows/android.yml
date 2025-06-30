@@ -11,13 +11,16 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: actions/setup-node@v3
+      - name: ⬇️ Usar Node compatible con dependencias
+        uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: '20.18.1'
 
-      - run: npm ci
+      - name: 📦 Instalar dependencias
+        run: npm ci
 
-      - uses: actions/setup-java@v3
+      - name: ☕ Configurar Java
+        uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: '11'
