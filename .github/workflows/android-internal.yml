@@ -44,14 +44,21 @@ jobs:
           versionCode: ${{ github.run_number }}
           versionName: 1.0.${{ github.run_number }}
 
-      - name: 🛠️ Compilar .aab (debug signing)
-        run: cd android && ./gradlew bundleRelease
+      - name: 🔓 Decodificar archivo release.keystore
+        run: |
+          echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
+
+      - name: 🔐 Compilar .aab firmado (release)
+        run: |
+          cd android
+          ./gradlew bundleRelease \
+            -PRELEASE_KEYSTORE_PATH=app/release.keystore \
+            -PRELEASE_KEYSTORE_PASSWORD=${{ secrets.RELEASE_KEYSTORE_PASSWORD }} \
+            -PRELEASE_KEY_ALIAS=${{ secrets.RELEASE_KEY_ALIAS }} \
+            -PRELEASE_KEY_PASSWORD=${{ secrets.RELEASE_KEY_PASSWORD }}
 
       - name: 🔍 Verificar .aab generado
         run: ls -lh android/app/build/outputs/bundle/release/app-release.aab
-
-      - name: 🔧 Activar modo debug
-        run: echo "ACTIONS_STEP_DEBUG=true" >> $GITHUB_ENV
 
       - name: ✅ Validar acceso a Play Console desde cuenta de servicio
         run: |
