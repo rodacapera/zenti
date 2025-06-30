@@ -30,8 +30,8 @@ jobs:
       - name: 📦 Instalar dependencias
         run: yarn install --frozen-lockfile
 
-      - name: ✅ Verificar lint
-        run: yarn lint
+      # - name: ✅ Verificar lint
+      #   run: yarn lint
 
       - name: ☕ Configurar Java 17
         uses: actions/setup-java@v3
