@@ -14,9 +14,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.zenti"
+    namespace "com.teranov.zentiapp"
     defaultConfig {
-        applicationId "com.zenti"
+        applicationId "com.teranov.zentiapp"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
