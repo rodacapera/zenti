@@ -46,6 +46,16 @@ jobs:
           versionCode: ${{ github.run_number }}
           versionName: 1.0.${{ github.run_number }}
 
+      # 🔐 Configuración de firma para producción (comentado por ahora)
+      # - name: 🔐 Restaurar archivo .keystore
+      #   run: |
+      #     echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/my-release-key.keystore
+
+      # 👉 Asegúrate de tener estas variables en tu archivo `gradle.properties` o como `env`:
+      #     KEYSTORE_PASSWORD
+      #     KEY_ALIAS
+      #     KEY_PASSWORD
+
       - name: 🏗️ Compilar Android App Bundle (.aab)
         run: cd android && ./gradlew bundleRelease
 
