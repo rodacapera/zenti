@@ -1,0 +1,30 @@
+name: 🍏 iOS CI/CD (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_ios:
+        description: '¿Desplegar a TestFlight?'
+        required: true
+        default: 'no'
+        type: choice
+        options:
+          - yes
+          - no
+
+jobs:
+  build-ios:
+    if: ${{ github.event.inputs.run_ios == 'yes' }}
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ruby/setup-ruby@v3;
+        with: { ruby-version: '3.2' }
+      - run: gem install bundler
+      - run: cd ios && bundle install && bundle exec pod install
+      - run: bundle exec fastlane ios beta
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APP_STORE_CONNECT_API_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
