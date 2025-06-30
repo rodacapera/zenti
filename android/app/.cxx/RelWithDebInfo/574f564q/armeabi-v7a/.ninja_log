@@ -1,0 +1,8 @@
+# ninja log v5
+9	161	1751315262206902412	build.ninja	1c18d9154059cb18
+2	1216	1751315214647116953	CMakeFiles/appmodules.dir/Users/rhonaldcapera/Documents/zenti/repo/zenti/android/app/build/generated/autolinking/src/main/jni/autolinking.cpp.o	9d0dfb6d38c38b6f
+0	9	0	/Users/rhonaldcapera/Documents/zenti/repo/zenti/android/app/.cxx/RelWithDebInfo/574f564q/armeabi-v7a/CMakeFiles/cmake.verify_globs	4403a86b89fd642d
+3	1391	1751315214820937360	CMakeFiles/appmodules.dir/OnLoad.cpp.o	935eaf5750054204
+1391	1440	1751315214875867202	/Users/rhonaldcapera/Documents/zenti/repo/zenti/android/app/build/intermediates/cxx/RelWithDebInfo/574f564q/obj/armeabi-v7a/libappmodules.so	56dcefdd135c072e
+0	8	0	clean	cc029a6d62a35608
+0	8	0	/Users/rhonaldcapera/Documents/zenti/repo/zenti/android/app/.cxx/RelWithDebInfo/574f564q/armeabi-v7a/CMakeFiles/cmake.verify_globs	4403a86b89fd642d

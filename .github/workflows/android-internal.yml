@@ -53,6 +53,10 @@ jobs:
       - name: 🔧 Activar modo debug
         run: echo "ACTIONS_STEP_DEBUG=true" >> $GITHUB_ENV
 
+      - name: ✅ Validar acceso a Play Console desde cuenta de servicio
+        run: |
+          echo "${{ secrets.SERVICE_ACCOUNT_JSON }}" | jq .
+
       - name: 🚀 Subir a Google Play Console - INTERNAL
         uses: r0adkll/upload-google-play@v1
         with:

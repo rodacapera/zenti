@@ -36,12 +36,20 @@ android {
 
         // Firma condicional para producción
         release {
-            def keystorePath = System.getenv("RELEASE_KEYSTORE_PATH")
-            if (keystorePath) {
-                storeFile file(keystorePath)
-                storePassword System.getenv("RELEASE_KEYSTORE_PASSWORD")
-                keyAlias System.getenv("RELEASE_KEY_ALIAS")
-                keyPassword System.getenv("RELEASE_KEY_PASSWORD")
+            // Read the variables from the environment or from gradle.properties
+            def path = System.getenv("RELEASE_KEYSTORE_PATH") ?: RELEASE_KEYSTORE_PATH
+            def pwd = System.getenv("RELEASE_KEYSTORE_PASSWORD") ?: RELEASE_KEYSTORE_PASSWORD
+            def alias = System.getenv("RELEASE_KEY_ALIAS") ?: RELEASE_KEY_ALIAS
+            def keyPwd = System.getenv("RELEASE_KEY_PASSWORD") ?: RELEASE_KEY_PASSWORD
+
+            // If exists, use the variables
+            if (path && pwd && alias && keyPwd) {
+                storeFile = file(path)
+                storePassword = pwd
+                keyAlias = alias
+                keyPassword=  keyPwd
+            } else {
+                println("⚠️ Advertencia: Configuración de firma release incompleta. Verifica tus variables de entorno o gradle.properties.")
             }
         }
     }
@@ -51,13 +59,7 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
-            // Usa firma si se proporciona vía variables de entorno
-            if (System.getenv("RELEASE_KEYSTORE_PATH")) {
-                signingConfig signingConfigs.release
-            } else {
-                // Mientras tanto, usa la debug para pruebas internas
-                signingConfig signingConfigs.debug
-            }
+            signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
