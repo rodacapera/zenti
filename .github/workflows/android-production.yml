@@ -8,6 +8,7 @@ on:
 jobs:
   build-android-production:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     steps:
       - name: 📦 Checkout del repositorio
@@ -43,21 +44,48 @@ jobs:
           versionCode: ${{ github.run_number }}
           versionName: 1.0.${{ github.run_number }}
 
-      - name: 🔐 Restaurar archivo .keystore
-        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
+      - name: 🔓 Decodificar archivo release.keystore
+        run: |
+          mkdir -p android/app
+          echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
 
-      - name: 🏗️ Compilar .aab firmado
-        env:
-          RELEASE_KEYSTORE_PATH: android/app/release.keystore
-          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          RELEASE_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          RELEASE_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: cd android && ./gradlew bundleRelease
+      - name: 🔐 Compilar .aab firmado (release)
+        run: |
+          cd android
+          ./gradlew bundleRelease \
+            -PRELEASE_KEYSTORE_PATH=app/release.keystore \
+            -PRELEASE_KEYSTORE_PASSWORD=${{ secrets.RELEASE_KEYSTORE_PASSWORD }} \
+            -PRELEASE_KEY_ALIAS=${{ secrets.RELEASE_KEY_ALIAS }} \
+            -PRELEASE_KEY_PASSWORD=${{ secrets.RELEASE_KEY_PASSWORD }}
+
+      - name: 🔍 Verificar .aab generado
+        run: ls -lh android/app/build/outputs/bundle/release/app-release.aab
+
+      - name: 📄 Decodificar service-account.json
+        run: |
+          mkdir -p android
+          echo "${{ secrets.SERVICE_ACCOUNT_JSON_BASE64 }}" | base64 --decode > android/service-account.json
+
+      - name: 📂 Ver contenido de service-account.json (debug)
+        run: |
+          echo "=== LISTA android/ ==="
+          ls -l android
+          echo "=== START service-account.json ==="
+          sed -n '1,5p' android/service-account.json
+          echo "..."
+          sed -n '$p' android/service-account.json
+          echo "=== END service-account.json ==="
+
+      - name: ✅ Validar JSON
+        run: |
+          if ! jq empty android/service-account.json; then
+            echo "❌ JSON inválido o truncado"; exit 1;
+          fi
 
       - name: 🚀 Subir a Google Play Console - PRODUCTION
         uses: r0adkll/upload-google-play@v1
         with:
-          serviceAccountJsonPlainText: ${{ secrets.SERVICE_ACCOUNT_JSON }}
+          serviceAccountJson: android/service-account.json
           packageName: com.teranov.zentiapp
-          releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
+          releaseFiles: ${{ github.workspace }}/android/app/build/outputs/bundle/release/app-release.aab
           track: production

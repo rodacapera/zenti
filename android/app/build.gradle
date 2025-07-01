@@ -36,12 +36,25 @@ android {
 
         // Firma condicional para producción
         release {
-            def keystorePath = System.getenv("RELEASE_KEYSTORE_PATH")
-            if (keystorePath) {
-                storeFile file(keystorePath)
-                storePassword System.getenv("RELEASE_KEYSTORE_PASSWORD")
-                keyAlias System.getenv("RELEASE_KEY_ALIAS")
-                keyPassword System.getenv("RELEASE_KEY_PASSWORD")
+            // Read the variables from the environment or from gradle.properties
+            // def path = project.hasProperty("RELEASE_KEYSTORE_PATH") ?: project.findProperty("RELEASE_KEYSTORE_PATH")
+            // def pwd = project.hasProperty("RELEASE_KEYSTORE_PASSWORD") ?: project.findProperty("RELEASE_KEYSTORE_PASSWORD")
+            // def alias = project.hasProperty("RELEASE_KEY_ALIAS") ?: project.findProperty("RELEASE_KEY_ALIAS")
+            // def keyPwd = project.hasProperty("RELEASE_KEY_PASSWORD") ?: project.findProperty("RELEASE_KEY_PASSWORD")
+
+            def path  = project.hasProperty('RELEASE_KEYSTORE_PATH') ? project.property('RELEASE_KEYSTORE_PATH') : null
+            def pwd = project.hasProperty('RELEASE_KEYSTORE_PASSWORD') ? project.property('RELEASE_KEYSTORE_PASSWORD') : null
+            def alias = project.hasProperty('RELEASE_KEY_ALIAS') ? project.property('RELEASE_KEY_ALIAS') : null
+            def keyPwd = project.hasProperty('RELEASE_KEY_PASSWORD') ? project.property('RELEASE_KEY_PASSWORD') : null
+
+            // If exists, use the variables
+            if (path && pwd && alias && keyPwd) {
+                storeFile = file("${rootDir}/${path}")
+                storePassword = pwd
+                keyAlias = alias
+                keyPassword=  keyPwd
+            } else {
+                println("⚠️ Advertencia: Configuración de firma release incompleta. Verifica tus variables de entorno o gradle.properties.")
             }
         }
     }
@@ -51,13 +64,7 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
-            // Usa firma si se proporciona vía variables de entorno
-            if (System.getenv("RELEASE_KEYSTORE_PATH")) {
-                signingConfig signingConfigs.release
-            } else {
-                // Mientras tanto, usa la debug para pruebas internas
-                signingConfig signingConfigs.debug
-            }
+            signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }

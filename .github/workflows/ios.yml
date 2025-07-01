@@ -2,6 +2,9 @@ name: 🍏 iOS CI/CD
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   build-ios:
@@ -20,6 +23,12 @@ jobs:
       - name: 📦 Instalar dependencias con Yarn
         run: yarn install --frozen-lockfile
 
+      - name: 🧹 Limpiar e instalar Pods
+        run: |
+          cd ios
+          pod deintegrate
+          pod install --repo-update
+
       - name: 🔐 Importar certificado y perfil de aprovisionamiento
         env:
           IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
@@ -36,7 +45,7 @@ jobs:
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp ~/certs/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
 
-      - name: 🏗️ Build iOS App
+      - name: 🏗️ Build iOS App (.xcarchive)
         run: |
           cd ios
           xcodebuild -workspace Zenti.xcworkspace \
@@ -44,14 +53,31 @@ jobs:
             -sdk iphoneos \
             -configuration Release \
             -archivePath $PWD/build/Zenti.xcarchive \
-            archive
+            archive | tee build.log | xcpretty
 
-      - name: 📦 Export .ipa
+      - name: ✅ Verificar archivo .xcarchive generado
+        run: |
+          if [ ! -d "ios/build/Zenti.xcarchive" ]; then
+            echo "❌ No se generó el archivo .xcarchive"
+            exit 1
+          fi
+
+      - name: 📦 Exportar .ipa
         run: |
           xcodebuild -exportArchive \
             -archivePath ios/build/Zenti.xcarchive \
             -exportOptionsPlist ios/exportOptions.plist \
             -exportPath ios/build
+
+      - name: ✅ Verificar archivo .ipa generado
+        run: |
+          if [ ! -f "ios/build/Zenti.ipa" ]; then
+            echo "❌ No se generó el archivo .ipa"
+            exit 1
+          else
+            echo "✅ Archivo .ipa generado correctamente:"
+            ls -lh ios/build/Zenti.ipa
+          fi
 
       - name: 🚀 Subir a TestFlight
         uses: appleboy/app-store-release-action@v1.1.1

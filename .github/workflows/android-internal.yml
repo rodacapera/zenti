@@ -11,14 +11,17 @@ jobs:
     timeout-minutes: 60
 
     steps:
+      # 1. Checkout
       - name: 📦 Checkout del repositorio
         uses: actions/checkout@v3
 
+      # 2. Configurar Node.js
       - name: 🔧 Configurar Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '20.18.1'
 
+      # 3. Cache de Yarn
       - name: ♻️ Cache de dependencias Yarn
         uses: actions/cache@v3
         with:
@@ -28,15 +31,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-yarn-
 
+      # 4. Instalar dependencias
       - name: 📥 Instalar dependencias
         run: yarn install --frozen-lockfile
 
+      # 5. Configurar Java 17
       - name: ☕ Configurar Java 17
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: '17'
 
+      # 6. Bump versionCode y versionName
       - name: 🔢 Bump versionCode y versionName
         uses: chkfung/android-version-actions@v1.2.2
         with:
@@ -44,19 +50,55 @@ jobs:
           versionCode: ${{ github.run_number }}
           versionName: 1.0.${{ github.run_number }}
 
-      - name: 🛠️ Compilar .aab (debug signing)
-        run: cd android && ./gradlew bundleRelease
+      # 7. Decodificar release.keystore
+      - name: 🔓 Decodificar archivo release.keystore
+        run: |
+          mkdir -p android/app
+          echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
 
+      # 8. Compilar el App Bundle (.aab) firmado
+      - name: 🔐 Compilar .aab firmado (release)
+        run: |
+          cd android
+          ./gradlew bundleRelease \
+            -PRELEASE_KEYSTORE_PATH=app/release.keystore \
+            -PRELEASE_KEYSTORE_PASSWORD=${{ secrets.RELEASE_KEYSTORE_PASSWORD }} \
+            -PRELEASE_KEY_ALIAS=${{ secrets.RELEASE_KEY_ALIAS }} \
+            -PRELEASE_KEY_PASSWORD=${{ secrets.RELEASE_KEY_PASSWORD }}
+
+      # 9. Verificar que el .aab se generó
       - name: 🔍 Verificar .aab generado
         run: ls -lh android/app/build/outputs/bundle/release/app-release.aab
 
-      - name: 🔧 Activar modo debug
-        run: echo "ACTIONS_STEP_DEBUG=true" >> $GITHUB_ENV
+      # 10. Decodificar service-account.json
+      - name: 📄 Decodificar service-account.json
+        run: |
+          mkdir -p android
+          echo "${{ secrets.SERVICE_ACCOUNT_JSON_BASE64 }}" | base64 --decode > android/service-account.json
 
+      # 11. Debug: listar y mostrar contenido del JSON
+      - name: 📂 Ver contenido de service-account.json (debug)
+        run: |
+          echo "=== LISTA android/ ==="
+          ls -l android
+          echo "=== START service-account.json ==="
+          sed -n '1,5p' android/service-account.json
+          echo "..."
+          sed -n '$p' android/service-account.json
+          echo "=== END service-account.json ==="
+
+      # 12. Validar que el JSON sea válido
+      - name: ✅ Validar JSON
+        run: |
+          if ! jq empty android/service-account.json; then
+            echo "❌ JSON inválido o truncado"; exit 1;
+          fi
+
+      # 13. Subir a Google Play Console - INTERNAL
       - name: 🚀 Subir a Google Play Console - INTERNAL
         uses: r0adkll/upload-google-play@v1
         with:
-          serviceAccountJsonPlainText: ${{ secrets.SERVICE_ACCOUNT_JSON }}
+          serviceAccountJson: android/service-account.json
           packageName: com.teranov.zentiapp
           releaseFiles: ${{ github.workspace }}/android/app/build/outputs/bundle/release/app-release.aab
           track: internal
