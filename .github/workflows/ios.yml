@@ -11,28 +11,23 @@ jobs:
     timeout-minutes: 45
 
     steps:
-      # 1. Clonar el repositorio
       - name: 📥 Checkout del código
         uses: actions/checkout@v3
 
-      # 2. Configurar Node.js
       - name: 🔧 Configurar Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '20.18.1'
 
-      # 3. Instalar dependencias con Yarn
       - name: 📦 Instalar dependencias
         run: yarn install --frozen-lockfile
 
-      # 4. Limpiar e instalar pods (importante para builds limpios)
       - name: 🧹 Reiniciar pods (deintegrate + install)
         run: |
           cd ios
           pod deintegrate
           pod install
 
-      # 5. Importar certificado y perfil de aprovisionamiento
       - name: 🔐 Configurar firma de código
         env:
           IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
@@ -51,33 +46,32 @@ jobs:
             -P "$IOS_CERT_PASSWORD" \
             -T /usr/bin/codesign
 
-          # Escapa el espacio en "Provisioning Profiles"
           mkdir -p "~/Library/MobileDevice/Provisioning Profiles"
           cp ~/certs/profile.mobileprovision \
              "~/Library/MobileDevice/Provisioning Profiles/profile.mobileprovision"
 
-      # 6. Compilar la app iOS (archivar)
       - name: 🏗️ Build iOS App
         run: |
           cd ios
-          xcodebuild -workspace Zenti.xcworkspace \
+          xcodebuild clean archive \
+            -workspace Zenti.xcworkspace \
             -scheme Zenti \
             -sdk iphoneos \
             -configuration Release \
-            -archivePath $PWD/build/Zenti.xcarchive \
-            clean archive \
-            DEVELOPMENT_TEAM=${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }}
+            -archivePath build/Zenti.xcarchive \
+            DEVELOPMENT_TEAM=${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }} \
+            CODE_SIGN_STYLE=Automatic \
+            -allowProvisioningUpdates
 
-      # 7. Exportar archivo .ipa
       - name: 📦 Exportar .ipa
         run: |
           cd ios
           xcodebuild -exportArchive \
             -archivePath build/Zenti.xcarchive \
             -exportOptionsPlist exportOptions.plist \
-            -exportPath build
+            -exportPath build \
+            -allowProvisioningUpdates
 
-      # 8. Subir a TestFlight usando fastlane
       - name: 🚀 Subir a TestFlight con Fastlane
         run: |
           gem install fastlane
