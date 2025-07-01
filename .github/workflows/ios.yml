@@ -1,12 +1,15 @@
 name: 🍏 iOS CI/CD - TestFlight
 
 on:
-  push:
-    branches: [develop] # Puedes cambiarlo si usas otro flujo
   workflow_dispatch:
+    inputs:
+      note:
+        description: 'Descripción del despliegue (opcional)'
+        required: false
 
 jobs:
   build-ios:
+    if: github.ref == 'refs/heads/main' # Solo ejecutar si es la rama main
     runs-on: macos-latest
     timeout-minutes: 30
 
@@ -51,7 +54,7 @@ jobs:
           cp ~/certs/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
 
       # 6. Compilar la app (.xcarchive)
-      - name: 🏗️ Build iOS App
+      - name: 🏗️ Compilar App iOS (archive)
         run: |
           cd ios
           xcodebuild -workspace Zenti.xcworkspace \
@@ -61,7 +64,7 @@ jobs:
             -archivePath $PWD/build/Zenti.xcarchive \
             archive
 
-      # 7. Exportar archivo .ipa
+      # 7. Exportar .ipa
       - name: 📦 Exportar .ipa
         run: |
           xcodebuild -exportArchive \
