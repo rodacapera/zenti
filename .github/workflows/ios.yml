@@ -1,40 +1,34 @@
-name: 🍏 iOS CI/CD - TestFlight
+name: 🍏 iOS CI/CD
 
 on:
   workflow_dispatch:
-    inputs:
-      note:
-        description: 'Descripción del despliegue (opcional)'
-        required: false
+  push:
+    branches:
+      - main
 
 jobs:
   build-ios:
-    if: github.ref == 'refs/heads/main' # Solo ejecutar si es la rama main
     runs-on: macos-latest
     timeout-minutes: 30
 
     steps:
-      # 1. Checkout del repositorio
       - name: 📥 Checkout del código
         uses: actions/checkout@v3
 
-      # 2. Configurar Node.js
       - name: 🔧 Configurar Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '20.18.1'
 
-      # 3. Instalar dependencias
       - name: 📦 Instalar dependencias con Yarn
         run: yarn install --frozen-lockfile
 
-      # 4. Instalar CocoaPods
-      - name: 📦 Instalar CocoaPods
+      - name: 🧹 Limpiar e instalar Pods
         run: |
           cd ios
-          pod install
+          pod deintegrate
+          pod install --repo-update
 
-      # 5. Importar certificado y perfil de aprovisionamiento
       - name: 🔐 Importar certificado y perfil de aprovisionamiento
         env:
           IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
@@ -44,17 +38,14 @@ jobs:
           mkdir -p ~/certs
           echo "$IOS_CERTIFICATE_BASE64" | base64 --decode > ~/certs/cert.p12
           echo "$IOS_PROFILE_BASE64" | base64 --decode > ~/certs/profile.mobileprovision
-
           security create-keychain -p "github" build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p "github" build.keychain
           security import ~/certs/cert.p12 -k build.keychain -P "$IOS_CERT_PASSWORD" -T /usr/bin/codesign
-
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp ~/certs/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
 
-      # 6. Compilar la app (.xcarchive)
-      - name: 🏗️ Compilar App iOS (archive)
+      - name: 🏗️ Build iOS App (.xcarchive)
         run: |
           cd ios
           xcodebuild -workspace Zenti.xcworkspace \
@@ -62,9 +53,15 @@ jobs:
             -sdk iphoneos \
             -configuration Release \
             -archivePath $PWD/build/Zenti.xcarchive \
-            archive
+            archive | tee build.log | xcpretty
 
-      # 7. Exportar .ipa
+      - name: ✅ Verificar archivo .xcarchive generado
+        run: |
+          if [ ! -d "ios/build/Zenti.xcarchive" ]; then
+            echo "❌ No se generó el archivo .xcarchive"
+            exit 1
+          fi
+
       - name: 📦 Exportar .ipa
         run: |
           xcodebuild -exportArchive \
@@ -72,7 +69,16 @@ jobs:
             -exportOptionsPlist ios/exportOptions.plist \
             -exportPath ios/build
 
-      # 8. Subir a TestFlight
+      - name: ✅ Verificar archivo .ipa generado
+        run: |
+          if [ ! -f "ios/build/Zenti.ipa" ]; then
+            echo "❌ No se generó el archivo .ipa"
+            exit 1
+          else
+            echo "✅ Archivo .ipa generado correctamente:"
+            ls -lh ios/build/Zenti.ipa
+          fi
+
       - name: 🚀 Subir a TestFlight
         uses: appleboy/app-store-release-action@v1.1.1
         with:
