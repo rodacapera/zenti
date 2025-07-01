@@ -1,35 +1,39 @@
-name: 🍏 iOS CI/CD
+name: 🍏 iOS CI/CD - Production
 
 on:
-  workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   build-ios:
-    runs-on: macos-latest
-    timeout-minutes: 30
+    runs-on: macos-14
+    timeout-minutes: 45
 
     steps:
+      # 1. Clonar el repositorio
       - name: 📥 Checkout del código
         uses: actions/checkout@v3
 
+      # 2. Configurar Node.js
       - name: 🔧 Configurar Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '20.18.1'
 
-      - name: 📦 Instalar dependencias con Yarn
+      # 3. Instalar dependencias con Yarn
+      - name: 📦 Instalar dependencias
         run: yarn install --frozen-lockfile
 
-      - name: 🧹 Limpiar e instalar Pods
+      # 4. Limpiar e instalar pods (importante para builds limpios)
+      - name: 🧹 Reiniciar pods (deintegrate + install)
         run: |
           cd ios
           pod deintegrate
-          pod install --repo-update
+          pod install
 
-      - name: 🔐 Importar certificado y perfil de aprovisionamiento
+      # 5. Importar certificado y perfil de aprovisionamiento
+      - name: 🔐 Configurar firma de código
         env:
           IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
           IOS_PROFILE_BASE64: ${{ secrets.IOS_PROFILE_BASE64 }}
@@ -38,14 +42,17 @@ jobs:
           mkdir -p ~/certs
           echo "$IOS_CERTIFICATE_BASE64" | base64 --decode > ~/certs/cert.p12
           echo "$IOS_PROFILE_BASE64" | base64 --decode > ~/certs/profile.mobileprovision
+
           security create-keychain -p "github" build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p "github" build.keychain
           security import ~/certs/cert.p12 -k build.keychain -P "$IOS_CERT_PASSWORD" -T /usr/bin/codesign
+
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp ~/certs/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
 
-      - name: 🏗️ Build iOS App (.xcarchive)
+      # 6. Compilar la app iOS (archivar)
+      - name: 🏗️ Build iOS App
         run: |
           cd ios
           xcodebuild -workspace Zenti.xcworkspace \
@@ -53,35 +60,25 @@ jobs:
             -sdk iphoneos \
             -configuration Release \
             -archivePath $PWD/build/Zenti.xcarchive \
-            archive | tee build.log | xcpretty
+            clean archive \
+            DEVELOPMENT_TEAM=${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }}
 
-      - name: ✅ Verificar archivo .xcarchive generado
-        run: |
-          if [ ! -d "ios/build/Zenti.xcarchive" ]; then
-            echo "❌ No se generó el archivo .xcarchive"
-            exit 1
-          fi
-
+      # 7. Exportar archivo .ipa
       - name: 📦 Exportar .ipa
         run: |
+          cd ios
           xcodebuild -exportArchive \
-            -archivePath ios/build/Zenti.xcarchive \
-            -exportOptionsPlist ios/exportOptions.plist \
-            -exportPath ios/build
+            -archivePath build/Zenti.xcarchive \
+            -exportOptionsPlist exportOptions.plist \
+            -exportPath build
 
-      - name: ✅ Verificar archivo .ipa generado
+      # 8. Subir a TestFlight usando fastlane
+      - name: 🚀 Subir a TestFlight con Fastlane
         run: |
-          if [ ! -f "ios/build/Zenti.ipa" ]; then
-            echo "❌ No se generó el archivo .ipa"
-            exit 1
-          else
-            echo "✅ Archivo .ipa generado correctamente:"
-            ls -lh ios/build/Zenti.ipa
-          fi
-
-      - name: 🚀 Subir a TestFlight
-        uses: appleboy/app-store-release-action@v1.1.1
-        with:
-          username: ${{ secrets.APP_STORE_CONNECT_USERNAME }}
-          password: ${{ secrets.APP_STORE_CONNECT_PASSWORD }}
-          app_path: ios/build/Zenti.ipa
+          gem install fastlane
+          fastlane pilot upload \
+            --username "${{ secrets.APP_STORE_CONNECT_USERNAME }}" \
+            --app_identifier "com.teranov.zentiapp" \
+            --ipa "ios/build/Zenti.ipa" \
+            --skip_waiting_for_build_processing true \
+            --skip_submission true
