@@ -1,9 +1,10 @@
-name: 🍏 iOS CI/CD – TestFlight
+name: 🍏 iOS CI/CD - TestFlight (Manual Dispatch & Paths)
 
 on:
   workflow_dispatch:
   push:
-    branches: [develop]
+    branches:
+      - develop
     paths:
       - 'ios/**'
       - 'Podfile'
@@ -12,125 +13,76 @@ on:
 
 jobs:
   build-and-upload-ios:
-    runs-on: macos-14
+    runs-on: macos-latest
     timeout-minutes: 45
 
     steps:
-      # 1️⃣ Checkout
-      - uses: actions/checkout@v3
+      # 0️⃣ Checkout
+      - name: 📥 Checkout
+        uses: actions/checkout@v3
 
-      # 2️⃣ Importar certificado P12 al keychain temporal
-      - name: 🔑 Importar P12
-        env:
-          P12_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
-          P12_PASS: ${{ secrets.IOS_CERT_PASSWORD }}
-        run: |
-          mkdir -p ~/certs
-          echo "$P12_BASE64" | base64 -d > ~/certs/dist.p12
+      # 1️⃣ Instala Node y deps JS
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.18.1'
 
-          # Crear e importar en keychain 'build'
-          security create-keychain -p "" build.keychain
-          security import ~/certs/dist.p12 \
-            -k ~/Library/Keychains/build.keychain \
-            -P "$P12_PASS" \
-            -T /usr/bin/codesign
+      - name: 📦 Install JS deps
+        run: yarn install --frozen-lockfile
 
-          security default-keychain -s build.keychain
-          security unlock-keychain -p "" build.keychain
-
-      # 3️⃣ Decodificar y copiar tu provisioning profile
-      - name: 📄 Instalar provisioning profile
-        env:
-          PROFILE_BASE64: ${{ secrets.IOS_PROFILE_BASE64 }}
-        run: |
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          echo "$PROFILE_BASE64" | base64 -d > ~/Library/MobileDevice/Provisioning\ Profiles/ZentiApp_Distribution_Profile.mobileprovision
-          echo "── Perfil instalado:"
-          ls -l ~/Library/MobileDevice/Provisioning\ Profiles
-
-      # 4️⃣ Instalación de dependencias
-      - uses: actions/setup-node@v3
-        with: { node-version: '20.18.1' }
-      - run: yarn install --frozen-lockfile
-      - name: Install CocoaPods
-        run: |
+      # 2️⃣ CocoaPods
+      - name: 🧹 Install Pods
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.x'
+      - run: |
           cd ios
           pod install --repo-update
           cd ..
 
-      # 5️⃣ Versionado (opcional)
-      - name: Bump version & build number
+      # 3️⃣ Version bump
+      - name: 🏷️ Bump version & build number
         run: |
           cd ios
           xcrun agvtool new-marketing-version 1.0.1
           xcrun agvtool new-version -all ${{ github.run_number }}
           cd ..
 
-      # 6️⃣ Archive + Export con Manual Signing
-      # 6️⃣ Archive + Export con Manual Signing y UUID
-      - name: 🏗️ Archive & Export IPA
-        env:
-          TEAM_ID: ${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }}
-        run: |
-          cd ios
+      # 4️⃣ Build & Export usando firma automática
+      - name: 🏗️ Build & Export IPA
+        uses: yukiarrr/ios-build-action@v1.12.0
+        with:
+          workspace-path: ios/Zenti.xcworkspace
+          scheme: Zenti
+          export-method: app-store
+          output-path: ios/build
+          team-id: ${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }}
+          signing-style: Automatic
+          custom-keychain-name: build
 
-          # UUID de tu provisioning (grep -A1 '<key>UUID</key>' /tmp/profile.plist)
-          PROFILE_UUID="8341da20-329d-447b-b885-b72b10e866d6"
-
-          # Limpia, archiva y firma manualmente usando el UUID
-          xcodebuild clean archive \
-            -workspace Zenti.xcworkspace \
-            -scheme Zenti \
-            -archivePath build/Zenti.xcarchive \
-            CODE_SIGN_STYLE=Manual \
-            DEVELOPMENT_TEAM="$TEAM_ID" \
-            PROVISIONING_PROFILE="$PROFILE_UUID" \
-            CODE_SIGN_IDENTITY="Apple Distribution"
-
-          # Prepara ExportOptions.plist
-          cat > ExportOptions.plist <<EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
-           "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>method</key><string>app-store</string>
-            <key>signingStyle</key><string>manual</string>
-            <key>teamID</key><string>$TEAM_ID</string>
-            <key>uploadSymbols</key><true/>
-            <key>uploadBitcode</key><false/>
-          </dict>
-          </plist>
-          EOF
-
-          # Exporta el IPA
-          xcodebuild -exportArchive \
-            -archivePath build/Zenti.xcarchive \
-            -exportPath  build \
-            -exportOptionsPlist ExportOptions.plist
-
-          cd ..
-
-      # 7️⃣ Mostrar log si falla
-      - name: 🔍 Mostrar Gym log si falla
+      # 5️⃣ Mostrar logs si algo falla
+      - name: 🔍 Dump Gym log on failure
         if: failure()
-        run: cat /Users/runner/Library/Logs/gym/Zenti-Zenti.log || echo "⚠️ Log no encontrado"
+        run: |
+          echo "----- Gym Log -----"
+          cat ~/Library/Logs/gym/Zenti-Zenti.log || echo "(no log found)"
 
-      # 8️⃣ Verificar IPA
-      - name: Verificar IPA generado
+      # 6️⃣ Verificar IPA
+      - name: 📁 Check generated IPA
         run: |
           ls -lh ios/build
-          test -f ios/build/Zenti.ipa || (echo "❌ IPA no encontrado" && exit 1)
+          test -f ios/build/*.ipa || (echo "❌ IPA not found" && exit 1)
 
-      # 9️⃣ Subir a TestFlight
+      # 7️⃣ Subir a TestFlight
       - name: 🚀 Upload to TestFlight
         env:
           APPLE_ID: ${{ secrets.APP_STORE_CONNECT_USERNAME }}
           APP_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
         run: |
-          xcrun altool --upload-app \
+          xcrun altool \
+            --upload-app \
             --type ios \
-            --file ios/build/Zenti.ipa \
+            --file ios/build/$(ls ios/build | grep .ipa) \
             --username "$APPLE_ID" \
             --password "$APP_SPECIFIC_PASSWORD" \
             --output-format xml
