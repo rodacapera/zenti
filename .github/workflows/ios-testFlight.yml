@@ -72,8 +72,20 @@ jobs:
       - name: 📄 Verificar perfil provisioning
         run: |
           file ios/certs/profile.mobileprovision
-          echo "UUID / Name / TeamIdentifier:"
-          security cms -D -i ios/certs/profile.mobileprovision | grep -E '<UUID>|<Name>|<TeamIdentifier>'
+          echo "Intentando decodificar con security cms:"
+          if security cms -D -i ios/certs/profile.mobileprovision > /tmp/profile.plist; then
+            echo "✅ security cms funca"
+            grep -E '<UUID>|<Name>|<TeamIdentifier>' /tmp/profile.plist || echo "⚠️ No encontró campos esperados"
+          else
+            echo "❌ security cms falló, probando con openssl..."
+            openssl smime -inform der -verify -noverify -in ios/certs/profile.mobileprovision > /tmp/profile2.plist
+            if grep -E '<UUID>|<Name>|<TeamIdentifier>' /tmp/profile2.plist; then
+              echo "✅ openssl decodificó correctamente"
+            else
+              echo "❌ openssl también falló, perfil inválido?"
+              exit 1
+            fi
+          fi
 
       - name: ✅ Resultado final
         run: echo "🎉 Secrets iOS verificados correctamente si no hubo errores arriba."
@@ -114,6 +126,7 @@ jobs:
           mobileprovision-base64: ${{ secrets.IOS_PROFILE_BASE64 }}
           certificate-password: ${{ secrets.IOS_CERT_PASSWORD }}
           team-id: ${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }}
+          export-options-plist-path: ios/ExportOptions.plist
           code-signing-identity: 'Apple Distribution'
           custom-keychain-name: 'build'
 
