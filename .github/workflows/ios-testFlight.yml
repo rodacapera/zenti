@@ -41,9 +41,8 @@ jobs:
         run: |
           echo "📂 Schemes disponibles:"
           ls ios/Zenti.xcworkspace/xcshareddata/xcschemes
-          # Solo verifica que contiene "Zenti" en cualquier parte
-          if grep -q 'name="Zenti"' ios/Zenti.xcworkspace/xcshareddata/xcschemes/*.xcscheme; then
-            echo "✅ Scheme compartido OK"
+          if grep -q 'Zenti' ios/Zenti.xcworkspace/xcshareddata/xcschemes/*.xcscheme; then
+            echo "✅ Scheme Zenti compartido OK"
           else
             echo "❌ Scheme “Zenti” no está compartido en el workspace"
             exit 1
