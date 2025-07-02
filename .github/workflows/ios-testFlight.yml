@@ -1,4 +1,4 @@
-name: 🍏 iOS CI/CD - TestFlight (Manual & Path Filters)
+name: 🍏 iOS CI/CD - TestFlight (Manual & Paths)
 
 on:
   workflow_dispatch:
@@ -70,10 +70,11 @@ jobs:
           code-signing-identity: 'Apple Distribution'
           custom-keychain-name: 'build'
 
-      - name: 🔍 Verificar IPA
-        run: ls -lh ios/build
+      - name: 🔍 Verificar IPA generado
+        run: |
+          ls -lh ios/build/Zenti.ipa
 
-      - name: 🚀 Subir a TestFlight con altool
+      - name: 🚀 Subir a TestFlight con altool (sin Fastlane)
         env:
           APPLE_ID: ${{ secrets.APP_STORE_CONNECT_USERNAME }}
           APP_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
