@@ -1,0 +1,99 @@
+name: 🍏 iOS CI/CD - TestFlight (sin API Key)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-upload-ios:
+    runs-on: macos-14
+    timeout-minutes: 45
+
+    steps:
+      - name: 📥 Checkout del código
+        uses: actions/checkout@v3
+
+      - name: 🔧 Configurar Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.18.1'
+
+      - name: 📦 Instalar dependencias
+        run: yarn install --frozen-lockfile
+
+      - name: 🧹 Instalar pods
+        run: |
+          cd ios
+          pod install
+
+      - name: 🔐 Configurar firma de código
+        env:
+          IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
+          IOS_PROFILE_BASE64: ${{ secrets.IOS_PROFILE_BASE64 }}
+          IOS_CERT_PASSWORD: ${{ secrets.IOS_CERT_PASSWORD }}
+        run: |
+          mkdir -p ~/certs
+          echo "$IOS_CERTIFICATE_BASE64" | base64 --decode > ~/certs/cert.p12
+          echo "$IOS_PROFILE_BASE64"    | base64 --decode > ~/certs/profile.mobileprovision
+
+          security create-keychain -p "github" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "github" build.keychain
+          security import ~/certs/cert.p12 -k build.keychain -P "$IOS_CERT_PASSWORD" -T /usr/bin/codesign
+
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp ~/certs/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+
+      - name: 🏷️ Bump version and build number
+        run: |
+          cd ios
+          xcrun agvtool new-marketing-version 1.0.19
+          xcrun agvtool new-version -all ${{ github.run_number }}
+
+      - name: 🏗️ Build iOS App (archive)
+        run: |
+          cd ios
+          xcodebuild clean archive \
+            -workspace Zenti.xcworkspace \
+            -scheme Zenti \
+            -archivePath build/Zenti.xcarchive \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM=${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }} \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            -allowProvisioningUpdates
+
+      - name: 📦 Exportar IPA
+        run: |
+          cd ios
+          xcodebuild -exportArchive \
+            -archivePath build/Zenti.xcarchive \
+            -exportPath build \
+            -exportOptionsPlist <(cat <<EOF
+            <?xml version="1.0" encoding="UTF-8"?>
+            <plist version="1.0">
+              <dict>
+                <key>method</key>
+                <string>app-store</string>
+                <key>uploadBitcode</key>
+                <false/>
+                <key>uploadSymbols</key>
+                <true/>
+              </dict>
+            </plist>
+            EOF
+            ) \
+            -allowProvisioningUpdates
+
+      - name: 🚀 Subir a TestFlight con Fastlane
+        run: |
+          gem install fastlane
+          fastlane pilot upload \
+            --username "${{ secrets.APP_STORE_CONNECT_USERNAME }}" \
+            --app_identifier "com.teranov.zentiapp" \
+            --ipa "ios/build/Zenti.ipa" \
+            --skip_waiting_for_build_processing true \
+            --skip_submission true
+        env:
+          FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
