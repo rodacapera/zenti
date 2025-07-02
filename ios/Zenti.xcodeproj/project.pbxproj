@@ -317,7 +317,6 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.teranov.zentiapp;
 				PRODUCT_NAME = Zenti;
-				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;

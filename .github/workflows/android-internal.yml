@@ -1,9 +1,13 @@
-name: 🤖 Android CI/CD - Internal Testing
+name: 🤖 Android CI/CD - Internal Testing (Path Filters)
 
 on:
-  push:
-    branches: [develop]
   workflow_dispatch:
+  push:
+    branches:
+      - develop
+    paths:
+      - 'android/**'
+      - '.github/workflows/android-internal.yml'
 
 jobs:
   build-android-internal:
@@ -76,29 +80,18 @@ jobs:
           mkdir -p android
           echo "${{ secrets.SERVICE_ACCOUNT_JSON_BASE64 }}" | base64 --decode > android/service-account.json
 
-      # 11. Debug: listar y mostrar contenido del JSON
-      - name: 📂 Ver contenido de service-account.json (debug)
-        run: |
-          echo "=== LISTA android/ ==="
-          ls -l android
-          echo "=== START service-account.json ==="
-          sed -n '1,5p' android/service-account.json
-          echo "..."
-          sed -n '$p' android/service-account.json
-          echo "=== END service-account.json ==="
-
-      # 12. Validar que el JSON sea válido
+      # 11. Validar que el JSON sea válido
       - name: ✅ Validar JSON
         run: |
           if ! jq empty android/service-account.json; then
             echo "❌ JSON inválido o truncado"; exit 1;
           fi
 
-      # 13. Subir a Google Play Console - INTERNAL
+      # 12. Subir a Google Play Console - INTERNAL
       - name: 🚀 Subir a Google Play Console - INTERNAL
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJson: android/service-account.json
           packageName: com.teranov.zentiapp
-          releaseFiles: ${{ github.workspace }}/android/app/build/outputs/bundle/release/app-release.aab
+          releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
           track: internal
