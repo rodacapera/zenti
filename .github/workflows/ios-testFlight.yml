@@ -19,23 +19,36 @@ jobs:
       # 1️⃣ Checkout
       - uses: actions/checkout@v3
 
-      # 2️⃣ Importar tu certificado P12 en un keychain temporal
-      - name: 🔑 Importar certificado de distribución
+      # 2️⃣ Importar certificado P12 al keychain temporal
+      - name: 🔑 Importar P12
         env:
           P12_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
           P12_PASS: ${{ secrets.IOS_CERT_PASSWORD }}
         run: |
           mkdir -p ~/certs
-          echo "$P12_BASE64"  | base64 -d > ~/certs/dist.p12
+          echo "$P12_BASE64" | base64 -d > ~/certs/dist.p12
+
+          # Crear e importar en keychain 'build'
           security create-keychain -p "" build.keychain
           security import ~/certs/dist.p12 \
             -k ~/Library/Keychains/build.keychain \
             -P "$P12_PASS" \
             -T /usr/bin/codesign
+
           security default-keychain -s build.keychain
           security unlock-keychain -p "" build.keychain
 
-      # 3️⃣ Instalar dependencias
+      # 3️⃣ Decodificar y copiar tu provisioning profile
+      - name: 📄 Instalar provisioning profile
+        env:
+          PROFILE_BASE64: ${{ secrets.IOS_PROFILE_BASE64 }}
+        run: |
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "$PROFILE_BASE64" | base64 -d > ~/Library/MobileDevice/Provisioning\ Profiles/ZentiApp_Distribution_Profile.mobileprovision
+          echo "── Perfil instalado:"
+          ls -l ~/Library/MobileDevice/Provisioning\ Profiles
+
+      # 4️⃣ Instalación de dependencias
       - uses: actions/setup-node@v3
         with: { node-version: '20.18.1' }
       - run: yarn install --frozen-lockfile
@@ -45,69 +58,67 @@ jobs:
           pod install --repo-update
           cd ..
 
-      # 4️⃣ Versionado (opcional)
-      - name: Bump marketing version & build number
+      # 5️⃣ Versionado (opcional)
+      - name: Bump version & build number
         run: |
           cd ios
           xcrun agvtool new-marketing-version 1.0.1
           xcrun agvtool new-version -all ${{ github.run_number }}
           cd ..
 
-      # 5️⃣ Archive + Export con xcodebuild + Automatic Signing
+      # 6️⃣ Archive + Export con Manual Signing
       - name: 🏗️ Archive & Export IPA
         env:
-          DEVELOPER_TEAM: ${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }}
+          TEAM_ID: ${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }}
         run: |
           cd ios
 
-          # 5.1 Clean + Archive
+          # Clean + Archive (Manual signing)
           xcodebuild clean archive \
             -workspace Zenti.xcworkspace \
             -scheme Zenti \
             -archivePath build/Zenti.xcarchive \
-            CODE_SIGN_STYLE=Automatic \
-            DEVELOPMENT_TEAM="$DEVELOPER_TEAM" \
-            -allowProvisioningUpdates
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            PROVISIONING_PROFILE_SPECIFIER="ZentiApp_Distribution_Profile" \
+            CODE_SIGN_IDENTITY="Apple Distribution"
 
-          # 5.2 Generar ExportOptions.plist dinámico
-          cat <<EOF > ExportOptions.plist
+          # ExportOptions
+          cat > ExportOptions.plist <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
            "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
           <dict>
             <key>method</key><string>app-store</string>
-            <key>signingStyle</key><string>automatic</string>
-            <key>stripSwiftSymbols</key><true/>
-            <key>compileBitcode</key><false/>
-            <key>teamID</key><string>$DEVELOPER_TEAM</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>teamID</key><string>$TEAM_ID</string>
+            <key>uploadSymbols</key><true/>
+            <key>uploadBitcode</key><false/>
           </dict>
           </plist>
           EOF
 
-          # 5.3 Exportar .ipa
+          # Exportar IPA
           xcodebuild -exportArchive \
             -archivePath build/Zenti.xcarchive \
             -exportPath  build \
-            -exportOptionsPlist ExportOptions.plist \
-            -allowProvisioningUpdates
+            -exportOptionsPlist ExportOptions.plist
 
           cd ..
 
-      # 6️⃣ Si falla, ver el log de gym
-      - name: 🔍 Dump Xcode/raw Gym log on failure
+      # 7️⃣ Mostrar log si falla
+      - name: 🔍 Mostrar Gym log si falla
         if: failure()
-        run: |
-          echo "---- RAW xcodebuild log ----"
-          cat /Users/runner/Library/Logs/gym/Zenti-Zenti.log || echo "Log no encontrado"
+        run: cat /Users/runner/Library/Logs/gym/Zenti-Zenti.log || echo "⚠️ Log no encontrado"
 
-      # 7️⃣ Verificar IPA
+      # 8️⃣ Verificar IPA
       - name: Verificar IPA generado
         run: |
           ls -lh ios/build
-          test -f ios/build/Zenti.ipa || (echo "❌ IPA no generado" && exit 1)
+          test -f ios/build/Zenti.ipa || (echo "❌ IPA no encontrado" && exit 1)
 
-      # 8️⃣ Subir a TestFlight vía altool
+      # 9️⃣ Subir a TestFlight
       - name: 🚀 Upload to TestFlight
         env:
           APPLE_ID: ${{ secrets.APP_STORE_CONNECT_USERNAME }}
