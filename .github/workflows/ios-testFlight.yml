@@ -56,6 +56,16 @@ jobs:
           xcode-select -p
           xcodebuild -version
 
+      # 📋 Dump build settings for signing
+      - name: 📝 Imprimir Build Settings de Firma
+        run: |
+          cd ios
+          xcodebuild -workspace Zenti.xcworkspace \
+                     -scheme Zenti \
+                     -configuration Release \
+                     -showBuildSettings \
+            | grep -E "(CODE_SIGN_STYLE|PROVISIONING_PROFILE|DEVELOPMENT_TEAM|CODE_SIGN_IDENTITY)"
+
       # 6️⃣ Build & Export IPA (auto signing)
       - name: 🏗️ Build & Export IPA
         uses: yukiarrr/ios-build-action@v1.12.0
