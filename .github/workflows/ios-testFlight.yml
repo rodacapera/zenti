@@ -1,4 +1,4 @@
-name: 🍏 iOS CI/CD - TestFlight (Manual & Paths)
+name: 🍏 iOS CI/CD - TestFlight (Manual & Validaciones)
 
 on:
   workflow_dispatch:
@@ -54,6 +54,30 @@ jobs:
           xcrun agvtool new-version -all ${{ github.run_number }}
           cd ..
 
+      # ✅ Validar que los secretos se decodifican correctamente
+      - name: Verificar Certificado y Perfil
+        env:
+          P12_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
+          PROFILE_BASE64: ${{ secrets.IOS_PROFILE_BASE64 }}
+        run: |
+          mkdir -p ios/certs
+          echo "$P12_BASE64" | base64 -d > ios/certs/cert.p12
+          echo "$PROFILE_BASE64" | base64 -d > ios/certs/profile.mobileprovision
+
+          echo "📦 Certificado generado:"
+          file ios/certs/cert.p12
+
+          echo "📄 Perfil mobileprovision:"
+          security cms -D -i ios/certs/profile.mobileprovision | grep -E '<UUID>|<Name>|<TeamIdentifier>'
+
+      # ✅ Validar que el scheme compartido existe
+      - name: Validar Scheme Compartido
+        run: |
+          echo "📂 Schemes disponibles:"
+          ls ios/Zenti.xcworkspace/xcshareddata/xcschemes
+          cat ios/Zenti.xcworkspace/xcshareddata/xcschemes/Zenti.xcscheme | grep "<Scheme"
+
+      # ✅ Compilar IPA con yukiarrr
       - name: Build & Export IPA
         uses: yukiarrr/ios-build-action@v1.12.0
         with:
@@ -69,9 +93,14 @@ jobs:
           code-signing-identity: 'Apple Distribution'
           custom-keychain-name: 'build'
 
-      - name: Verify IPA
-        run: ls -lh ios/build
+      # ✅ Validar que el IPA fue generado
+      - name: Verificar IPA generado
+        run: |
+          echo "📁 Contenido de ios/build:"
+          ls -lh ios/build
+          test -f ios/build/Zenti.ipa && echo "✅ IPA generado correctamente" || (echo "❌ No se generó el IPA" && exit 1)
 
+      # ✅ Subir a TestFlight
       - name: Upload to TestFlight via altool
         env:
           APPLE_ID: ${{ secrets.APP_STORE_CONNECT_USERNAME }}
