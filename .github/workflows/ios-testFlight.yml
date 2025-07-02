@@ -1,4 +1,4 @@
-name: 🍏 iOS CI/CD - TestFlight (Manual)
+name: 🍏 iOS CI/CD - TestFlight (Manual Signing Definitivo)
 
 on:
   workflow_dispatch:
@@ -28,28 +28,40 @@ jobs:
           cd ios
           pod install
 
-      - name: 🔐 Configurar firma automática
+      - name: 🔐 Importar certificado y perfil
         env:
-          IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
-          IOS_CERT_PASSWORD: ${{ secrets.IOS_CERT_PASSWORD }}
+          IOS_CERT_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
+          IOS_CERT_PASS: ${{ secrets.IOS_CERT_PASSWORD }}
+          IOS_PROFILE_BASE64: ${{ secrets.IOS_PROFILE_BASE64 }}
         run: |
           mkdir -p ~/certs
-          echo "$IOS_CERTIFICATE_BASE64" | base64 --decode > ~/certs/cert.p12
+          echo "$IOS_CERT_BASE64" | base64 --decode > ~/certs/cert.p12
+          echo "$IOS_PROFILE_BASE64"   | base64 --decode > ~/certs/profile.mobileprovision
 
-          security create-keychain -p "github" build.keychain
+          # keychain
+          security create-keychain -p "" build.keychain
           security default-keychain -s build.keychain
-          security unlock-keychain -p "github" build.keychain
-          security import ~/certs/cert.p12 -k build.keychain -P "$IOS_CERT_PASSWORD" -T /usr/bin/codesign
+          security unlock-keychain -p "" build.keychain
+          security import ~/certs/cert.p12 -k build.keychain -P "$IOS_CERT_PASS" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
 
-          security set-key-partition-list -S apple-tool:,apple: -s -k "github" build.keychain
+          # provisioning
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp ~/certs/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
 
       - name: 🏷️ Bump versión y build number
         run: |
           cd ios
-          echo "📌 Marketing version: 1.0.1"
           xcrun agvtool new-marketing-version 1.0.1
-          echo "📌 Build number: ${{ github.run_number }}"
           xcrun agvtool new-version -all ${{ github.run_number }}
+
+      - name: 🔍 Extraer UUID del provisioning profile
+        id: profile_uuid
+        run: |
+          UUID=$(security cms -D -i ~/certs/profile.mobileprovision \
+            | plutil -extract UUID xml1 -o - - \
+            | sed -n 's/.*<string>\(.*\)<\/string>.*/\1/p')
+          echo "PROFILE_UUID=$UUID" >> $GITHUB_OUTPUT
 
       - name: 🏗️ Compilar App iOS (.xcarchive)
         run: |
@@ -58,31 +70,31 @@ jobs:
             -workspace Zenti.xcworkspace \
             -scheme Zenti \
             -archivePath build/Zenti.xcarchive \
-            CODE_SIGN_STYLE=Automatic \
+            CODE_SIGN_STYLE=Manual \
             DEVELOPMENT_TEAM=${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }} \
+            PROVISIONING_PROFILE="$PROFILE_UUID" \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
             -allowProvisioningUpdates
 
-      - name: 📦 Exportar IPA usando ExportOptions.plist existente
+      - name: 📦 Exportar IPA
         run: |
           cd ios
           xcodebuild -exportArchive \
             -archivePath build/Zenti.xcarchive \
-            -exportPath build \
             -exportOptionsPlist ExportOptions.plist \
+            -exportPath build \
             -allowProvisioningUpdates
 
-      - name: 🔍 Buscar y validar archivo IPA
+      - name: 🔍 Buscar y validar IPA
         id: find_ipa
         run: |
-          IPA_PATH=$(find ios/build -type f -name "*.ipa" | head -n 1)
-          if [ -z "$IPA_PATH" ]; then
-            echo "❌ No se encontró ningún archivo IPA. Abortando..."
-            exit 1
-          fi
-          echo "✅ IPA encontrada en: $IPA_PATH"
-          echo "IPA_PATH=$IPA_PATH" >> $GITHUB_OUTPUT
+          IPA=$(find ios/build -type f -name "*.ipa" | head -n1)
+          [ -n "$IPA" ] || { echo "❌ IPA no encontrada"; exit 1; }
+          echo "IPA_PATH=$IPA" >> $GITHUB_OUTPUT
 
       - name: 🚀 Subir a TestFlight con Fastlane
+        env:
+          FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
         run: |
           gem install fastlane
           fastlane pilot upload \
@@ -91,5 +103,3 @@ jobs:
             --ipa "${{ steps.find_ipa.outputs.IPA_PATH }}" \
             --skip_waiting_for_build_processing true \
             --skip_submission true
-        env:
-          FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
