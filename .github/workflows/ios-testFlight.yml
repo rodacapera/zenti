@@ -1,12 +1,16 @@
-name: 🍏 iOS CI/CD - TestFlight (Automático)
+name: 🍏 iOS CI/CD - TestFlight (Manual desde develop)
 
 on:
-  push:
-    branches: [main] # Se ejecuta automáticamente cuando haces push a main
-  workflow_dispatch: # También puedes ejecutarlo manualmente si lo deseas
+  workflow_dispatch:
+    inputs:
+      note:
+        description: 'Descripción opcional del despliegue'
+        required: false
+        default: 'Despliegue manual a TestFlight desde develop'
 
 jobs:
   build-and-upload-ios:
+    if: github.ref == 'refs/heads/develop'
     runs-on: macos-14
     timeout-minutes: 45
 
