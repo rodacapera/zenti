@@ -67,23 +67,27 @@ jobs:
           cd ..
 
       # 6️⃣ Archive + Export con Manual Signing
+      # 6️⃣ Archive + Export con Manual Signing y UUID
       - name: 🏗️ Archive & Export IPA
         env:
           TEAM_ID: ${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }}
         run: |
           cd ios
 
-          # Clean + Archive (Manual signing)
+          # UUID de tu provisioning (grep -A1 '<key>UUID</key>' /tmp/profile.plist)
+          PROFILE_UUID="8341da20-329d-447b-b885-b72b10e866d6"
+
+          # Limpia, archiva y firma manualmente usando el UUID
           xcodebuild clean archive \
             -workspace Zenti.xcworkspace \
             -scheme Zenti \
             -archivePath build/Zenti.xcarchive \
             CODE_SIGN_STYLE=Manual \
             DEVELOPMENT_TEAM="$TEAM_ID" \
-            PROVISIONING_PROFILE_SPECIFIER="ZentiApp_Distribution_Profile" \
+            PROVISIONING_PROFILE="$PROFILE_UUID" \
             CODE_SIGN_IDENTITY="Apple Distribution"
 
-          # ExportOptions
+          # Prepara ExportOptions.plist
           cat > ExportOptions.plist <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
@@ -99,7 +103,7 @@ jobs:
           </plist>
           EOF
 
-          # Exportar IPA
+          # Exporta el IPA
           xcodebuild -exportArchive \
             -archivePath build/Zenti.xcarchive \
             -exportPath  build \
