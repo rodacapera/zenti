@@ -1,13 +1,18 @@
-name: 🍏 iOS CI/CD - TestFlight (Manual)
+name: 🍏 iOS CI/CD - TestFlight (Manual & Path Filters)
 
 on:
   workflow_dispatch:
   push:
-    branches-ignore: ['*']
+    branches:
+      - develop
+    paths:
+      - 'ios/**'
+      - 'Podfile'
+      - 'Podfile.lock'
+      - '.github/workflows/ios-testflight.yml'
 
 jobs:
   build-and-upload-ios:
-    if: github.ref == 'refs/heads/develop'
     runs-on: macos-14
     timeout-minutes: 45
 
@@ -20,8 +25,22 @@ jobs:
         with:
           node-version: '20.18.1'
 
+      - name: Cache Yarn
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/yarn
+            node_modules
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+
       - name: 📦 Instalar dependencias
         run: yarn install --frozen-lockfile
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v3
+        with:
+          path: ios/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
 
       - name: 🧹 Instalar pods
         run: |
@@ -54,14 +73,15 @@ jobs:
       - name: 🔍 Verificar IPA
         run: ls -lh ios/build
 
-      - name: 🚀 Subir a TestFlight con Fastlane
+      - name: 🚀 Subir a TestFlight con altool
         env:
-          FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
+          APPLE_ID: ${{ secrets.APP_STORE_CONNECT_USERNAME }}
+          APP_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
         run: |
-          gem install fastlane
-          fastlane pilot upload \
-            --username "${{ secrets.APP_STORE_CONNECT_USERNAME }}" \
-            --app_identifier "com.teranov.zentiapp" \
-            --ipa "ios/build/Zenti.ipa" \
-            --skip_waiting_for_build_processing true \
-            --skip_submission true
+          xcrun altool \
+            --upload-app \
+            --type ios \
+            --file ios/build/Zenti.ipa \
+            --username "$APPLE_ID" \
+            --password "$APP_SPECIFIC_PASSWORD" \
+            --output-format xml
