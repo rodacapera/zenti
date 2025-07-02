@@ -105,11 +105,21 @@ jobs:
           xcode-select -p
           xcodebuild -version
 
+      - name: 🧪 Verificar configuración de firma
+        run: |
+          cd ios
+          xcodebuild -workspace Zenti.xcworkspace \
+            -scheme Zenti \
+            -configuration Release \
+            -showBuildSettings | grep -E "(CODE_SIGN_STYLE|DEVELOPMENT_TEAM|CODE_SIGN_IDENTITY)"
+
       # 5️⃣ Archive + export con signing automático
       - name: 📦 Archive & Export IPA
         run: |
           set -e
           cd ios
+
+          export TEAM_ID="${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }}"
 
           # Archivar
           xcodebuild clean archive \
@@ -117,7 +127,7 @@ jobs:
             -scheme Zenti \
             -configuration Release \
             -archivePath build/Zenti.xcarchive \
-            DEVELOPMENT_TEAM="$TEAM_ID" \
+            DEVELOPMENT_TEAM=$TEAM_ID \
             CODE_SIGN_STYLE=Automatic \
             -allowProvisioningUpdates
 
@@ -128,11 +138,11 @@ jobs:
             -exportOptionsPlist ExportOptions.plist \
             -allowProvisioningUpdates
 
-      # 6️⃣ Verificar IPA
-      - name: 🔍 Verificar IPA generado
-        run: |
-          ls -lh ios/build
-          test -f ios/build/Zenti.ipa || (echo "❌ No se generó Zenti.ipa" && exit 1)
+            # 6️⃣ Verificar IPA
+            - name: 🔍 Verificar IPA generado
+              run: |
+                ls -lh ios/build
+                test -f ios/build/Zenti.ipa || (echo "❌ No se generó Zenti.ipa" && exit 1)
 
       # 7️⃣ Subir a TestFlight
       - name: 🚀 Upload to TestFlight
