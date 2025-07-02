@@ -56,11 +56,10 @@ jobs:
           xcodebuild clean archive \
             -workspace Zenti.xcworkspace \
             -scheme Zenti \
-            -sdk iphoneos \
             -configuration Release \
             -archivePath build/Zenti.xcarchive \
-            DEVELOPMENT_TEAM=${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }} \
             CODE_SIGN_STYLE=Automatic \
+            DEVELOPMENT_TEAM=${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }} \
             -allowProvisioningUpdates
 
       - name: 📦 Exportar .ipa
