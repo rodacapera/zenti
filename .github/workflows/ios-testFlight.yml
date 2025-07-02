@@ -3,7 +3,8 @@ name: 🍏 iOS CI/CD - TestFlight (Manual & Validaciones)
 on:
   workflow_dispatch:
   push:
-    branches: [develop]
+    branches:
+      - develop
     paths:
       - 'ios/**'
       - 'Podfile'
