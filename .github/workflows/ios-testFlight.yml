@@ -19,28 +19,25 @@ jobs:
       # 1️⃣ Checkout
       - uses: actions/checkout@v3
 
-      # 2️⃣ Importar tu P12 en un keychain temporal
+      # 2️⃣ Importar tu certificado P12 en un keychain temporal
       - name: 🔑 Importar certificado de distribución
         env:
           P12_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
           P12_PASS: ${{ secrets.IOS_CERT_PASSWORD }}
         run: |
           mkdir -p ~/certs
-          echo "$P12_BASE64" | base64 -d > ~/certs/cert.p12
-
-          # Creamos e importamos en build.keychain
+          echo "$P12_BASE64"  | base64 -d > ~/certs/dist.p12
           security create-keychain -p "" build.keychain
-          security import ~/certs/cert.p12 \
+          security import ~/certs/dist.p12 \
             -k ~/Library/Keychains/build.keychain \
             -P "$P12_PASS" \
             -T /usr/bin/codesign
           security default-keychain -s build.keychain
           security unlock-keychain -p "" build.keychain
 
-      # 3️⃣ Instalar dependencias JS + pods
+      # 3️⃣ Instalar dependencias
       - uses: actions/setup-node@v3
-        with:
-          node-version: '20.18.1'
+        with: { node-version: '20.18.1' }
       - run: yarn install --frozen-lockfile
       - name: Install CocoaPods
         run: |
@@ -48,7 +45,7 @@ jobs:
           pod install --repo-update
           cd ..
 
-      # 4️⃣ (Opcional) Bump de versión
+      # 4️⃣ Versionado (opcional)
       - name: Bump marketing version & build number
         run: |
           cd ios
@@ -56,26 +53,53 @@ jobs:
           xcrun agvtool new-version -all ${{ github.run_number }}
           cd ..
 
-      # 5️⃣ Build & Export IPA con firma automática
-      - name: Build & Export IPA
-        uses: yukiarrr/ios-build-action@v1.12.0
-        with:
-          workspace-path: ios/Zenti.xcworkspace
-          scheme: Zenti
-          export-method: app-store
-          output-path: ios/build
-          team-id: ${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }}
-          signing-style: Automatic
-          p12-base64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
-          certificate-password: ${{ secrets.IOS_CERT_PASSWORD }}
-          custom-keychain-name: build
+      # 5️⃣ Archive + Export con xcodebuild + Automatic Signing
+      - name: 🏗️ Archive & Export IPA
+        env:
+          DEVELOPER_TEAM: ${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }}
+        run: |
+          cd ios
 
-      # 6️⃣ Debug: log bruto si falla xcodebuild
-      - name: Dump raw xcodebuild log on failure
+          # 5.1 Clean + Archive
+          xcodebuild clean archive \
+            -workspace Zenti.xcworkspace \
+            -scheme Zenti \
+            -archivePath build/Zenti.xcarchive \
+            CODE_SIGN_STYLE=Automatic \
+            DEVELOPMENT_TEAM="$DEVELOPER_TEAM" \
+            -allowProvisioningUpdates
+
+          # 5.2 Generar ExportOptions.plist dinámico
+          cat <<EOF > ExportOptions.plist
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+           "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>stripSwiftSymbols</key><true/>
+            <key>compileBitcode</key><false/>
+            <key>teamID</key><string>$DEVELOPER_TEAM</string>
+          </dict>
+          </plist>
+          EOF
+
+          # 5.3 Exportar .ipa
+          xcodebuild -exportArchive \
+            -archivePath build/Zenti.xcarchive \
+            -exportPath  build \
+            -exportOptionsPlist ExportOptions.plist \
+            -allowProvisioningUpdates
+
+          cd ..
+
+      # 6️⃣ Si falla, ver el log de gym
+      - name: 🔍 Dump Xcode/raw Gym log on failure
         if: failure()
         run: |
-          echo "🚨 xcodebuild raw output:"
-          cat /Users/runner/Library/Logs/gym/Zenti-Zenti.log || echo "⚠️ Log no encontrado"
+          echo "---- RAW xcodebuild log ----"
+          cat /Users/runner/Library/Logs/gym/Zenti-Zenti.log || echo "Log no encontrado"
 
       # 7️⃣ Verificar IPA
       - name: Verificar IPA generado
@@ -83,8 +107,8 @@ jobs:
           ls -lh ios/build
           test -f ios/build/Zenti.ipa || (echo "❌ IPA no generado" && exit 1)
 
-      # 8️⃣ Subir a TestFlight via altool
-      - name: Upload to TestFlight
+      # 8️⃣ Subir a TestFlight vía altool
+      - name: 🚀 Upload to TestFlight
         env:
           APPLE_ID: ${{ secrets.APP_STORE_CONNECT_USERNAME }}
           APP_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
