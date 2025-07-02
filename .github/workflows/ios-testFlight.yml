@@ -93,6 +93,12 @@ jobs:
           code-signing-identity: 'Apple Distribution'
           custom-keychain-name: 'build'
 
+      - name: 🔍 Show full Fastlane log if build fails
+        if: failure()
+        run: |
+          echo "Mostrando contenido de Fastlane Gym Log:"
+          cat /Users/runner/Library/Logs/gym/Zenti-Zenti.log || echo "⚠️ Log no encontrado"
+
       # ✅ Validar que el IPA fue generado
       - name: Verificar IPA generado
         run: |
