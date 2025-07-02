@@ -61,14 +61,12 @@ jobs:
         run: |
           cd ios
           xcodebuild clean archive \
-            -workspace Zenti.xcworkspace \
-            -scheme Zenti \
-            -archivePath build/Zenti.xcarchive \
-            CODE_SIGN_STYLE=Manual \
-            DEVELOPMENT_TEAM=${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }} \
-            PROVISIONING_PROFILE_SPECIFIER="" \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
-            -allowProvisioningUpdates
+          -workspace Zenti.xcworkspace \
+          -scheme Zenti \
+          -archivePath build/Zenti.xcarchive \
+          CODE_SIGN_STYLE=Automatic \
+          DEVELOPMENT_TEAM=${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }} \
+          -allowProvisioningUpdates
 
       - name: 📦 Exportar IPA desde .xcarchive
         run: |
