@@ -34,8 +34,9 @@ jobs:
           cd ios
           xcrun agvtool new-marketing-version 1.0.1
           xcrun agvtool new-version -all ${{ github.run_number }}
+          cd ..
 
-      - name: 🏗️ Compilar y exportar IPA (yukiarrr/ios-build-action)
+      - name: 🏗️ Compilar y exportar IPA
         uses: yukiarrr/ios-build-action@v1.12.0
         with:
           workspace-path: ios/Zenti.xcworkspace
@@ -51,8 +52,7 @@ jobs:
           custom-keychain-name: 'build'
 
       - name: 🔍 Verificar IPA
-        run: |
-          ls -lh ios/build
+        run: ls -lh ios/build
 
       - name: 🚀 Subir a TestFlight con Fastlane
         env:
