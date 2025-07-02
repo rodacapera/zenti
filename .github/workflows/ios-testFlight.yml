@@ -1,4 +1,4 @@
-name: 🍏 iOS CI/CD - TestFlight (Manual & Validaciones)
+name: 🍏 iOS CI/CD – TestFlight
 
 on:
   workflow_dispatch:
@@ -11,116 +11,70 @@ on:
       - '.github/workflows/ios-testflight.yml'
 
 jobs:
-  build-and-upload-ios:
+  ios:
     runs-on: macos-14
     timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v3
 
-      # 1️⃣ Validación temprana de secretos (certificado + perfil)
-      - name: 🔐 Validar secretos P12 y provisioning profile
+      # 1️⃣ Importar certificado P12 en keychain
+      - name: 🔑 Importar certificado de distribución
         env:
           P12_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
-          PROFILE_BASE64: ${{ secrets.IOS_PROFILE_BASE64 }}
+          P12_PASS: ${{ secrets.IOS_CERT_PASSWORD }}
         run: |
           mkdir -p ios/certs
           echo "$P12_BASE64" | base64 -d > ios/certs/cert.p12
-          echo "$PROFILE_BASE64" | base64 -d > ios/certs/profile.mobileprovision
+          security create-keychain -p "" build.keychain
+          security import ios/certs/cert.p12 \
+            -k ~/Library/Keychains/build.keychain \
+            -P "$P12_PASS" \
+            -T /usr/bin/codesign
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
 
-          file ios/certs/cert.p12   # debe decir algo como: “PKCS #12”
-          file ios/certs/profile.mobileprovision  # debe decir “data”
-
-          security cms -D -i ios/certs/profile.mobileprovision -o /tmp/profile.plist
-          grep -A1 '<key>TeamIdentifier</key>' /tmp/profile.plist || (echo "❌ TeamIdentifier no encontrado" && exit 1)
-          grep -A1 '<key>UUID</key>' /tmp/profile.plist || (echo "❌ UUID no encontrado" && exit 1)
-          grep -A1 '<key>Name</key>' /tmp/profile.plist || (echo "❌ Name no encontrado" && exit 1)
-
-      # 2️⃣ Validación de scheme compartido
-      - name: Validar Scheme Compartido
-        run: |
-          echo "📂 Schemes disponibles:"
-          ls ios/Zenti.xcworkspace/xcshareddata/xcschemes
-          if grep -q 'Zenti' ios/Zenti.xcworkspace/xcshareddata/xcschemes/*.xcscheme; then
-            echo "✅ Scheme Zenti compartido OK"
-          else
-            echo "❌ Scheme “Zenti” no está compartido en el workspace"
-            exit 1
-          fi
-
-      # 3️⃣ Instalar dependencias (solo si validaciones pasaron)
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20.18.1'
-
-      - name: Cache Yarn
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/yarn
-            node_modules
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-
-      - name: Install JS deps
-        run: yarn install --frozen-lockfile
-
-      - name: Cache CocoaPods
-        uses: actions/cache@v3
-        with:
-          path: ios/Pods
-          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
-
+      # 2️⃣ Dependencias
+      - uses: actions/setup-node@v3
+        with: { node-version: '20.18.1' }
+      - run: yarn install --frozen-lockfile
       - name: Install pods
         run: |
-          cd ios && pod install && cd ..
+          cd ios && pod install --repo-update && cd ..
 
-      # 4️⃣ Versionado
-      - name: Bump version & build number
-        run: |
+      # 3️⃣ Versionado (opcional)
+      - run: |
           cd ios
           xcrun agvtool new-marketing-version 1.0.1
           xcrun agvtool new-version -all ${{ github.run_number }}
           cd ..
-      - name: Seleccionar Xcode
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: '16.2'
 
-      # 5️⃣ Build y export de IPA
+      # 4️⃣ Build & Export IPA con firma automática
       - name: Build & Export IPA
         uses: yukiarrr/ios-build-action@v1.12.0
         with:
           workspace-path: ios/Zenti.xcworkspace
-          project-path: ios/Zenti.xcodeproj
           scheme: Zenti
           export-method: app-store
-          output-path: ios/build/Zenti.ipa
-          p12-base64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
-          mobileprovision-base64: ${{ secrets.IOS_PROFILE_BASE64 }}
-          certificate-password: ${{ secrets.IOS_CERT_PASSWORD }}
+          output-path: ios/build
           team-id: ${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }}
-          export-options-plist-path: ios/ExportOptions.plist
-          code-signing-identity: 'Apple Distribution'
-          custom-keychain-name: 'build'
+          signing-style: Automatic
+          custom-keychain-name: build
 
-      - name: 🔍 Mostrar Fastlane Gym Log si falla build
+      # 5️⃣ Mostrar log bruto si falla
+      - name: Dump raw xcodebuild log
         if: failure()
-        run: cat /Users/runner/Library/Logs/gym/Zenti-Zenti.log || echo "⚠️ Log no encontrado"
-
-      - name: Verificar IPA generado
         run: |
-          ls -lh ios/build
-          test -f ios/build/Zenti.ipa || (echo "❌ IPA no generado" && exit 1)
+          echo "🚨 xcodebuild raw output:"
+          cat /Users/runner/Library/Logs/gym/Zenti-Zenti.log
 
-      # 6️⃣ Subir a TestFlight
+      # 6️⃣ Subir IPA a TestFlight
       - name: Upload to TestFlight via altool
         env:
           APPLE_ID: ${{ secrets.APP_STORE_CONNECT_USERNAME }}
           APP_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
         run: |
-          xcrun altool \
-            --upload-app --type ios \
+          xcrun altool --upload-app --type ios \
             --file ios/build/Zenti.ipa \
             --username "$APPLE_ID" \
             --password "$APP_SPECIFIC_PASSWORD" \
