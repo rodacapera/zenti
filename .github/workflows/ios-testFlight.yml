@@ -54,6 +54,30 @@ jobs:
           xcrun agvtool new-version -all ${{ github.run_number }}
           cd ..
 
+      - name: 🔄 Crear directorio para certs
+        run: mkdir -p ios/certs
+
+      - name: 📥 Decodificar archivos desde secretos
+        env:
+          P12_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
+          PROFILE_BASE64: ${{ secrets.IOS_PROFILE_BASE64 }}
+        run: |
+          echo "$P12_BASE64" | base64 -d > ios/certs/cert.p12
+          echo "$PROFILE_BASE64" | base64 -d > ios/certs/profile.mobileprovision
+
+      - name: 📦 Verificar certificado P12
+        run: |
+          file ios/certs/cert.p12
+
+      - name: 📄 Verificar perfil provisioning
+        run: |
+          file ios/certs/profile.mobileprovision
+          echo "UUID / Name / TeamIdentifier:"
+          security cms -D -i ios/certs/profile.mobileprovision | grep -E '<UUID>|<Name>|<TeamIdentifier>'
+
+      - name: ✅ Resultado final
+        run: echo "🎉 Secrets iOS verificados correctamente si no hubo errores arriba."
+
       # ✅ Validar que los secretos se decodifican correctamente
       - name: Verificar Certificado y Perfil
         env:
