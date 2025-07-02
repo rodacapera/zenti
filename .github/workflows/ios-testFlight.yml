@@ -17,10 +17,9 @@ jobs:
     timeout-minutes: 45
 
     steps:
-      - name: 📥 Checkout del código
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-      - name: 🔧 Configurar Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '20.18.1'
@@ -33,7 +32,7 @@ jobs:
             node_modules
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
 
-      - name: 📦 Instalar dependencias
+      - name: Install JS deps
         run: yarn install --frozen-lockfile
 
       - name: Cache CocoaPods
@@ -42,20 +41,20 @@ jobs:
           path: ios/Pods
           key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
 
-      - name: 🧹 Instalar pods
+      - name: Install pods
         run: |
           cd ios
           pod install
           cd ..
 
-      - name: 🏷️ Bump versión y build number
+      - name: Bump version & build number
         run: |
           cd ios
           xcrun agvtool new-marketing-version 1.0.1
           xcrun agvtool new-version -all ${{ github.run_number }}
           cd ..
 
-      - name: 🏗️ Compilar y exportar IPA
+      - name: Build & Export IPA
         uses: yukiarrr/ios-build-action@v1.12.0
         with:
           workspace-path: ios/Zenti.xcworkspace
@@ -70,11 +69,10 @@ jobs:
           code-signing-identity: 'Apple Distribution'
           custom-keychain-name: 'build'
 
-      - name: 🔍 Verificar IPA generado
-        run: |
-          ls -lh ios/build/Zenti.ipa
+      - name: Verify IPA
+        run: ls -lh ios/build
 
-      - name: 🚀 Subir a TestFlight con altool (sin Fastlane)
+      - name: Upload to TestFlight via altool
         env:
           APPLE_ID: ${{ secrets.APP_STORE_CONNECT_USERNAME }}
           APP_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
