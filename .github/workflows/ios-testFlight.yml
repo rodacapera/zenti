@@ -1,12 +1,9 @@
-name: 🍏 iOS CI/CD - TestFlight (Manual desde develop)
+name: 🍏 iOS CI/CD - TestFlight (Manual)
 
 on:
-  workflow_dispatch:
-    inputs:
-      note:
-        description: 'Descripción opcional del despliegue'
-        required: false
-        default: 'Despliegue manual a TestFlight desde develop'
+  workflow_dispatch: # Solo se ejecuta manualmente desde GitHub
+  push:
+    branches-ignore: ['*'] # Ignora todo para evitar ejecución automática
 
 jobs:
   build-and-upload-ios:
@@ -49,11 +46,16 @@ jobs:
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp ~/certs/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
 
-      - name: 🏷️ Bump versión y build number
+      - name: 🏷️ Bump versión y build number con validación
         run: |
           cd ios
+          echo "📌 Estableciendo versión de marketing a 1.0.1"
           xcrun agvtool new-marketing-version 1.0.1
+          echo "📌 Estableciendo build number a ${{ github.run_number }}"
           xcrun agvtool new-version -all ${{ github.run_number }}
+
+          echo "📄 Verificando Info.plist:"
+          plutil -p Zenti/Info.plist || echo "No se encontró Info.plist correctamente"
 
       - name: 🏗️ Compilar App iOS (.xcarchive)
         run: |
@@ -91,10 +93,23 @@ jobs:
             -exportOptionsPlist ExportOptions.plist \
             -allowProvisioningUpdates
 
-      - name: 🔍 Buscar el archivo IPA generado
+      - name: 🔍 Buscar y validar archivo IPA
         id: find_ipa
         run: |
           IPA_PATH=$(find ios/build -type f -name "*.ipa" | head -n 1)
+          if [ -z "$IPA_PATH" ]; then
+            echo "❌ No se encontró ningún archivo IPA. Abortando..."
+            exit 1
+          fi
+          FILE_SIZE=$(stat -f%z "$IPA_PATH")
+          echo "📦 Tamaño del IPA: $FILE_SIZE bytes"
+
+          if [ "$FILE_SIZE" -lt 1000000 ]; then
+            echo "❌ El archivo IPA es demasiado pequeño. Puede estar corrupto."
+            exit 1
+          fi
+
+          echo "✅ IPA encontrada en: $IPA_PATH"
           echo "IPA_PATH=$IPA_PATH" >> $GITHUB_OUTPUT
 
       - name: 🚀 Subir a TestFlight con Fastlane
