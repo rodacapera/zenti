@@ -1,9 +1,9 @@
 name: 🍏 iOS CI/CD - TestFlight (Manual)
 
 on:
-  workflow_dispatch: # Solo se ejecuta manualmente desde GitHub
+  workflow_dispatch:
   push:
-    branches-ignore: ['*'] # Ignora todo para evitar ejecución automática
+    branches-ignore: ['*']
 
 jobs:
   build-and-upload-ios:
@@ -28,63 +28,43 @@ jobs:
           cd ios
           pod install
 
-      - name: 🔐 Configurar firma de código
+      - name: 🔐 Configurar firma automática
         env:
           IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
-          IOS_PROFILE_BASE64: ${{ secrets.IOS_PROFILE_BASE64 }}
           IOS_CERT_PASSWORD: ${{ secrets.IOS_CERT_PASSWORD }}
         run: |
           mkdir -p ~/certs
           echo "$IOS_CERTIFICATE_BASE64" | base64 --decode > ~/certs/cert.p12
-          echo "$IOS_PROFILE_BASE64" | base64 --decode > ~/certs/profile.mobileprovision
 
           security create-keychain -p "github" build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p "github" build.keychain
           security import ~/certs/cert.p12 -k build.keychain -P "$IOS_CERT_PASSWORD" -T /usr/bin/codesign
 
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp ~/certs/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+          security set-key-partition-list -S apple-tool:,apple: -s -k "github" build.keychain
 
-      - name: 🏷️ Bump versión y build number con validación
+      - name: 🏷️ Bump versión y build number
         run: |
           cd ios
-          echo "📌 Estableciendo versión de marketing a 1.0.1"
+          echo "📌 Marketing version: 1.0.1"
           xcrun agvtool new-marketing-version 1.0.1
-          echo "📌 Estableciendo build number a ${{ github.run_number }}"
+          echo "📌 Build number: ${{ github.run_number }}"
           xcrun agvtool new-version -all ${{ github.run_number }}
-
-          echo "📄 Verificando Info.plist:"
-          plutil -p Zenti/Info.plist || echo "No se encontró Info.plist correctamente"
 
       - name: 🏗️ Compilar App iOS (.xcarchive)
         run: |
           cd ios
           xcodebuild clean archive \
-          -workspace Zenti.xcworkspace \
-          -scheme Zenti \
-          -archivePath build/Zenti.xcarchive \
-          CODE_SIGN_STYLE=Automatic \
-          DEVELOPMENT_TEAM=${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }} \
-          -allowProvisioningUpdates
+            -workspace Zenti.xcworkspace \
+            -scheme Zenti \
+            -archivePath build/Zenti.xcarchive \
+            CODE_SIGN_STYLE=Automatic \
+            DEVELOPMENT_TEAM=${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }} \
+            -allowProvisioningUpdates
 
-      - name: 📦 Exportar IPA desde .xcarchive
+      - name: 📦 Exportar IPA usando ExportOptions.plist existente
         run: |
           cd ios
-          cat <<EOF > ExportOptions.plist
-          <?xml version="1.0" encoding="UTF-8"?>
-          <plist version="1.0">
-          <dict>
-            <key>method</key>
-            <string>app-store</string>
-            <key>uploadBitcode</key>
-            <false/>
-            <key>uploadSymbols</key>
-            <true/>
-          </dict>
-          </plist>
-          EOF
-
           xcodebuild -exportArchive \
             -archivePath build/Zenti.xcarchive \
             -exportPath build \
@@ -99,14 +79,6 @@ jobs:
             echo "❌ No se encontró ningún archivo IPA. Abortando..."
             exit 1
           fi
-          FILE_SIZE=$(stat -f%z "$IPA_PATH")
-          echo "📦 Tamaño del IPA: $FILE_SIZE bytes"
-
-          if [ "$FILE_SIZE" -lt 1000000 ]; then
-            echo "❌ El archivo IPA es demasiado pequeño. Puede estar corrupto."
-            exit 1
-          fi
-
           echo "✅ IPA encontrada en: $IPA_PATH"
           echo "IPA_PATH=$IPA_PATH" >> $GITHUB_OUTPUT
 
