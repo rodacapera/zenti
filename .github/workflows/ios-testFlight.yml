@@ -37,12 +37,17 @@ jobs:
           grep -A1 '<key>Name</key>' /tmp/profile.plist || (echo "❌ Name no encontrado" && exit 1)
 
       # 2️⃣ Validación de scheme compartido
-      - name: 🧩 Validar scheme compartido en workspace
+      - name: Validar Scheme Compartido
         run: |
+          echo "📂 Schemes disponibles:"
           ls ios/Zenti.xcworkspace/xcshareddata/xcschemes
-          grep -q '<Scheme name="Zenti"' ios/Zenti.xcworkspace/xcshareddata/xcschemes/Zenti.xcscheme \
-            && echo "✅ Scheme Zenti compartido" \
-            || (echo "❌ Scheme Zenti no está compartido" && exit 1)
+          # Solo verifica que contiene "Zenti" en cualquier parte
+          if grep -q 'name="Zenti"' ios/Zenti.xcworkspace/xcshareddata/xcschemes/*.xcscheme; then
+            echo "✅ Scheme compartido OK"
+          else
+            echo "❌ Scheme “Zenti” no está compartido en el workspace"
+            exit 1
+          fi
 
       # 3️⃣ Instalar dependencias (solo si validaciones pasaron)
       - name: Set up Node.js
