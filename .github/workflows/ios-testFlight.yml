@@ -82,6 +82,10 @@ jobs:
           xcrun agvtool new-marketing-version 1.0.1
           xcrun agvtool new-version -all ${{ github.run_number }}
           cd ..
+      - name: Seleccionar Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16'
 
       # 5️⃣ Build y export de IPA
       - name: Build & Export IPA
