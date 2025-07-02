@@ -3,13 +3,14 @@ name: 🍏 iOS CI/CD - TestFlight (Manual & Validaciones)
 on:
   workflow_dispatch:
   push:
-    branches:
-      - develop
+    branches: [develop]
     paths:
-      - 'ios/**'
-      - 'Podfile'
-      - 'Podfile.lock'
-      - '.github/workflows/ios-testflight.yml'
+      [
+        'ios/**',
+        'Podfile',
+        'Podfile.lock',
+        '.github/workflows/ios-testflight.yml',
+      ]
 
 jobs:
   build-and-upload-ios:
@@ -21,8 +22,7 @@ jobs:
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
-        with:
-          node-version: '20.18.1'
+        with: { node-version: '20.18.1' }
 
       - name: Cache Yarn
         uses: actions/cache@v3
@@ -43,9 +43,7 @@ jobs:
 
       - name: Install pods
         run: |
-          cd ios
-          pod install
-          cd ..
+          cd ios && pod install && cd ..
 
       - name: Bump version & build number
         run: |
@@ -66,54 +64,21 @@ jobs:
           echo "$PROFILE_BASE64" | base64 -d > ios/certs/profile.mobileprovision
 
       - name: 📦 Verificar certificado P12
-        run: |
-          file ios/certs/cert.p12
+        run: file ios/certs/cert.p12
 
-      - name: 📄 Verificar perfil provisioning
+      - name: 📄 Verificar provisioning profile
         run: |
           file ios/certs/profile.mobileprovision
-          echo "Intentando decodificar con security cms:"
-          if security cms -D -i ios/certs/profile.mobileprovision > /tmp/profile.plist; then
-            echo "✅ security cms funca"
-            grep -E '<UUID>|<Name>|<TeamIdentifier>' /tmp/profile.plist || echo "⚠️ No encontró campos esperados"
-          else
-            echo "❌ security cms falló, probando con openssl..."
-            openssl smime -inform der -verify -noverify -in ios/certs/profile.mobileprovision > /tmp/profile2.plist
-            if grep -E '<UUID>|<Name>|<TeamIdentifier>' /tmp/profile2.plist; then
-              echo "✅ openssl decodificó correctamente"
-            else
-              echo "❌ openssl también falló, perfil inválido?"
-              exit 1
-            fi
-          fi
+          security cms -D -i ios/certs/profile.mobileprovision -o /tmp/profile.plist
+          grep -A1 '<key>TeamIdentifier</key>' /tmp/profile.plist
+          grep -A1 '<key>UUID</key>' /tmp/profile.plist
+          grep -A1 '<key>Name</key>' /tmp/profile.plist
 
-      - name: ✅ Resultado final
-        run: echo "🎉 Secrets iOS verificados correctamente si no hubo errores arriba."
-
-      # ✅ Validar que los secretos se decodifican correctamente
-      - name: Verificar Certificado y Perfil
-        env:
-          P12_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
-          PROFILE_BASE64: ${{ secrets.IOS_PROFILE_BASE64 }}
-        run: |
-          mkdir -p ios/certs
-          echo "$P12_BASE64" | base64 -d > ios/certs/cert.p12
-          echo "$PROFILE_BASE64" | base64 -d > ios/certs/profile.mobileprovision
-
-          echo "📦 Certificado generado:"
-          file ios/certs/cert.p12
-
-          echo "📄 Perfil mobileprovision:"
-          security cms -D -i ios/certs/profile.mobileprovision | grep -E '<UUID>|<Name>|<TeamIdentifier>'
-
-      # ✅ Validar que el scheme compartido existe
       - name: Validar Scheme Compartido
         run: |
-          echo "📂 Schemes disponibles:"
           ls ios/Zenti.xcworkspace/xcshareddata/xcschemes
-          cat ios/Zenti.xcworkspace/xcshareddata/xcschemes/Zenti.xcscheme | grep "<Scheme"
+          grep '<Scheme' ios/Zenti.xcworkspace/xcshareddata/xcschemes/Zenti.xcscheme
 
-      # ✅ Compilar IPA con yukiarrr
       - name: Build & Export IPA
         uses: yukiarrr/ios-build-action@v1.12.0
         with:
@@ -130,28 +95,22 @@ jobs:
           code-signing-identity: 'Apple Distribution'
           custom-keychain-name: 'build'
 
-      - name: 🔍 Show full Fastlane log if build fails
+      - name: 🔍 Mostrar Fastlane Gym Log si falla build
         if: failure()
-        run: |
-          echo "Mostrando contenido de Fastlane Gym Log:"
-          cat /Users/runner/Library/Logs/gym/Zenti-Zenti.log || echo "⚠️ Log no encontrado"
+        run: cat /Users/runner/Library/Logs/gym/Zenti-Zenti.log || echo "⚠️ Log no encontrado"
 
-      # ✅ Validar que el IPA fue generado
       - name: Verificar IPA generado
         run: |
-          echo "📁 Contenido de ios/build:"
           ls -lh ios/build
-          test -f ios/build/Zenti.ipa && echo "✅ IPA generado correctamente" || (echo "❌ No se generó el IPA" && exit 1)
+          test -f ios/build/Zenti.ipa
 
-      # ✅ Subir a TestFlight
       - name: Upload to TestFlight via altool
         env:
           APPLE_ID: ${{ secrets.APP_STORE_CONNECT_USERNAME }}
           APP_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
         run: |
           xcrun altool \
-            --upload-app \
-            --type ios \
+            --upload-app --type ios \
             --file ios/build/Zenti.ipa \
             --username "$APPLE_ID" \
             --password "$APP_SPECIFIC_PASSWORD" \
