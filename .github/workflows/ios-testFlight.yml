@@ -11,45 +11,52 @@ on:
       - '.github/workflows/ios-testflight.yml'
 
 jobs:
-  ios:
+  build-and-upload-ios:
     runs-on: macos-14
     timeout-minutes: 45
 
     steps:
+      # 1️⃣ Checkout
       - uses: actions/checkout@v3
 
-      # 1️⃣ Importar certificado P12 en keychain
+      # 2️⃣ Importar tu P12 en un keychain temporal
       - name: 🔑 Importar certificado de distribución
         env:
           P12_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
           P12_PASS: ${{ secrets.IOS_CERT_PASSWORD }}
         run: |
-          mkdir -p ios/certs
-          echo "$P12_BASE64" | base64 -d > ios/certs/cert.p12
+          mkdir -p ~/certs
+          echo "$P12_BASE64" | base64 -d > ~/certs/cert.p12
+
+          # Creamos e importamos en build.keychain
           security create-keychain -p "" build.keychain
-          security import ios/certs/cert.p12 \
+          security import ~/certs/cert.p12 \
             -k ~/Library/Keychains/build.keychain \
             -P "$P12_PASS" \
             -T /usr/bin/codesign
           security default-keychain -s build.keychain
           security unlock-keychain -p "" build.keychain
 
-      # 2️⃣ Dependencias
+      # 3️⃣ Instalar dependencias JS + pods
       - uses: actions/setup-node@v3
-        with: { node-version: '20.18.1' }
+        with:
+          node-version: '20.18.1'
       - run: yarn install --frozen-lockfile
-      - name: Install pods
+      - name: Install CocoaPods
         run: |
-          cd ios && pod install --repo-update && cd ..
+          cd ios
+          pod install --repo-update
+          cd ..
 
-      # 3️⃣ Versionado (opcional)
-      - run: |
+      # 4️⃣ (Opcional) Bump de versión
+      - name: Bump marketing version & build number
+        run: |
           cd ios
           xcrun agvtool new-marketing-version 1.0.1
           xcrun agvtool new-version -all ${{ github.run_number }}
           cd ..
 
-      # 4️⃣ Build & Export IPA con firma automática
+      # 5️⃣ Build & Export IPA con firma automática
       - name: Build & Export IPA
         uses: yukiarrr/ios-build-action@v1.12.0
         with:
@@ -59,22 +66,31 @@ jobs:
           output-path: ios/build
           team-id: ${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }}
           signing-style: Automatic
+          p12-base64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
+          certificate-password: ${{ secrets.IOS_CERT_PASSWORD }}
           custom-keychain-name: build
 
-      # 5️⃣ Mostrar log bruto si falla
-      - name: Dump raw xcodebuild log
+      # 6️⃣ Debug: log bruto si falla xcodebuild
+      - name: Dump raw xcodebuild log on failure
         if: failure()
         run: |
           echo "🚨 xcodebuild raw output:"
-          cat /Users/runner/Library/Logs/gym/Zenti-Zenti.log
+          cat /Users/runner/Library/Logs/gym/Zenti-Zenti.log || echo "⚠️ Log no encontrado"
 
-      # 6️⃣ Subir IPA a TestFlight
-      - name: Upload to TestFlight via altool
+      # 7️⃣ Verificar IPA
+      - name: Verificar IPA generado
+        run: |
+          ls -lh ios/build
+          test -f ios/build/Zenti.ipa || (echo "❌ IPA no generado" && exit 1)
+
+      # 8️⃣ Subir a TestFlight via altool
+      - name: Upload to TestFlight
         env:
           APPLE_ID: ${{ secrets.APP_STORE_CONNECT_USERNAME }}
           APP_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
         run: |
-          xcrun altool --upload-app --type ios \
+          xcrun altool --upload-app \
+            --type ios \
             --file ios/build/Zenti.ipa \
             --username "$APPLE_ID" \
             --password "$APP_SPECIFIC_PASSWORD" \
