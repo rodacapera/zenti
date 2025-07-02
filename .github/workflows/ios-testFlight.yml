@@ -84,4 +84,3 @@ jobs:
             --username "$APPLE_ID" \
             --password "$APP_SPECIFIC_PASSWORD" \
             --output-format xml
-        # s
