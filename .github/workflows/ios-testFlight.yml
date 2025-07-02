@@ -20,8 +20,8 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v3
 
-      # 1️⃣ Validar secretos + preparar keychain y provisioning
-      - name: 🔐 Importar P12 y mobileprovision
+      # 1️⃣ Importar y validar P12 + provisioning
+      - name: 🔐 Importar certificado y perfil
         env:
           P12_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
           PROFILE_BASE64: ${{ secrets.IOS_PROFILE_BASE64 }}
@@ -33,7 +33,7 @@ jobs:
           echo "$P12_BASE64"    | base64 -d > ios/certs/cert.p12
           echo "$PROFILE_BASE64"| base64 -d > ios/certs/profile.mobileprovision
 
-          # importar certificado
+          # importar al keychain "build"
           security create-keychain -p "" build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p "" build.keychain
@@ -46,24 +46,29 @@ jobs:
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp ios/certs/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
 
-          # validación rápida
+          # validaciones rápidas
           file ios/certs/cert.p12
           file ios/certs/profile.mobileprovision
-          security cms -D -i ios/certs/profile.mobileprovision \
-            -o /tmp/profile.plist
+          security cms -D -i ios/certs/profile.mobileprovision -o /tmp/profile.plist
           grep -q '<key>UUID</key>'      /tmp/profile.plist
           grep -q '<key>TeamIdentifier</key>' /tmp/profile.plist
 
-      # 2️⃣ Validar que el scheme está compartido
+      # 2️⃣ Validar scheme compartido (contiene "Zenti")
       - name: ✅ Validar Scheme Compartido
         run: |
+          echo "Schemes en workspace:"
           ls ios/Zenti.xcworkspace/xcshareddata/xcschemes
-          grep -q '<Scheme name="Zenti"' ios/Zenti.xcworkspace/xcshareddata/xcschemes/*.xcscheme
+          if grep -q 'Zenti' ios/Zenti.xcworkspace/xcshareddata/xcschemes/*.xcscheme; then
+            echo "✅ Encontrado ‘Zenti’ en alguno de los schemes"
+          else
+            echo "❌ No se encontró ‘Zenti’ en los schemes compartidos" && exit 1
+          fi
 
       # 3️⃣ Dependencias y versionado
       - name: 🔧 Setup Node.js
         uses: actions/setup-node@v3
-        with: { node-version: '20.18.1' }
+        with:
+          node-version: '20.18.1'
 
       - name: 📦 Cache & install JS deps
         uses: actions/cache@v3
@@ -89,45 +94,45 @@ jobs:
           xcrun agvtool new-version -all ${{ github.run_number }}
           cd ..
 
-      # 4️⃣ Seleccionar Xcode (opcional)
-      - name: 🔨 Seleccionar Xcode 16.2
+      # 4️⃣ Seleccionar Xcode 16.2
+      - name: 🔨 Seleccionar Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: '16.2'
 
-      - name: 📋 Mostrar versión de Xcode
+      - name: 📋 Ver versión de Xcode
         run: |
           xcode-select -p
           xcodebuild -version
 
-      # 5️⃣ Archive + export con Signing automático
-      - name: 📦 Archive & Export IPA (Automatic Signing)
+      # 5️⃣ Archive + export con signing automático
+      - name: 📦 Archive & Export IPA
         run: |
           set -e
           cd ios
 
-          # 5.1 Archivar
+          # Archivar
           xcodebuild clean archive \
             -workspace Zenti.xcworkspace \
             -scheme Zenti \
             -configuration Release \
             -archivePath build/Zenti.xcarchive \
-            DEVELOPMENT_TEAM=$TEAM_ID \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
             CODE_SIGN_STYLE=Automatic \
             -allowProvisioningUpdates
 
-          # 5.2 Exportar IPA
+          # Exportar
           xcodebuild -exportArchive \
             -archivePath build/Zenti.xcarchive \
             -exportPath build \
             -exportOptionsPlist ExportOptions.plist \
             -allowProvisioningUpdates
 
-      # 6️⃣ Validar que IPA exista
+      # 6️⃣ Verificar IPA
       - name: 🔍 Verificar IPA generado
         run: |
           ls -lh ios/build
-          test -f ios/build/Zenti.ipa
+          test -f ios/build/Zenti.ipa || (echo "❌ No se generó Zenti.ipa" && exit 1)
 
       # 7️⃣ Subir a TestFlight
       - name: 🚀 Upload to TestFlight
