@@ -1,4 +1,4 @@
-name: 🍏 iOS CI/CD - TestFlight (Manual Dispatch & Paths)
+name: 🍏 iOS CI/CD - TestFlight (Auto Signing)
 
 on:
   workflow_dispatch:
@@ -12,35 +12,32 @@ on:
       - '.github/workflows/ios-testflight.yml'
 
 jobs:
-  build-and-upload-ios:
+  ios-testflight:
     runs-on: macos-latest
     timeout-minutes: 45
 
     steps:
-      # 0️⃣ Checkout
-      - name: 📥 Checkout
+      # 1️⃣ Checkout
+      - name: 📥 Checkout code
         uses: actions/checkout@v3
 
-      # 1️⃣ Instala Node y deps JS
+      # 2️⃣ Node & JS deps
       - name: 🔧 Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '20.18.1'
 
-      - name: 📦 Install JS deps
+      - name: 📦 Install JS dependencies
         run: yarn install --frozen-lockfile
 
-      # 2️⃣ CocoaPods
-      - name: 🧹 Install Pods
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.x'
-      - run: |
+      # 3️⃣ CocoaPods
+      - name: 🧹 Install CocoaPods
+        run: |
           cd ios
           pod install --repo-update
           cd ..
 
-      # 3️⃣ Version bump
+      # 4️⃣ Version bump
       - name: 🏷️ Bump version & build number
         run: |
           cd ios
@@ -48,7 +45,18 @@ jobs:
           xcrun agvtool new-version -all ${{ github.run_number }}
           cd ..
 
-      # 4️⃣ Build & Export usando firma automática
+      # 5️⃣ Select Xcode 16.x (opcional, para forzar la versión)
+      - name: 🔧 Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16.2'
+
+      - name: 🔍 Xcode version
+        run: |
+          xcode-select -p
+          xcodebuild -version
+
+      # 6️⃣ Build & Export IPA (auto signing)
       - name: 🏗️ Build & Export IPA
         uses: yukiarrr/ios-build-action@v1.12.0
         with:
@@ -60,29 +68,30 @@ jobs:
           signing-style: Automatic
           custom-keychain-name: build
 
-      # 5️⃣ Mostrar logs si algo falla
+      # 7️⃣ Dump Gym log if archive fails
       - name: 🔍 Dump Gym log on failure
         if: failure()
         run: |
           echo "----- Gym Log -----"
           cat ~/Library/Logs/gym/Zenti-Zenti.log || echo "(no log found)"
 
-      # 6️⃣ Verificar IPA
-      - name: 📁 Check generated IPA
+      # 8️⃣ Verify IPA
+      - name: 📁 Verify IPA exists
         run: |
           ls -lh ios/build
           test -f ios/build/*.ipa || (echo "❌ IPA not found" && exit 1)
 
-      # 7️⃣ Subir a TestFlight
+      # 9️⃣ Upload to TestFlight
       - name: 🚀 Upload to TestFlight
         env:
           APPLE_ID: ${{ secrets.APP_STORE_CONNECT_USERNAME }}
           APP_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
         run: |
+          IPA=$(ls ios/build/*.ipa)
           xcrun altool \
             --upload-app \
             --type ios \
-            --file ios/build/$(ls ios/build | grep .ipa) \
+            --file "$IPA" \
             --username "$APPLE_ID" \
-            --password "$APP_SPECIFIC_PASSWORD" \
+            --password "$APPLE_SPECIFIC_PASSWORD" \
             --output-format xml
