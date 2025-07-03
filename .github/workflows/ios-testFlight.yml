@@ -160,7 +160,7 @@ jobs:
       # 💾 Guardar log de build como artefacto
       - name: 💾 Guardar log de xcodebuild
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: xcodebuild-log
           path: ios/xcodebuild.log
