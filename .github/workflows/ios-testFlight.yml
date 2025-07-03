@@ -138,14 +138,18 @@ jobs:
           ls -la
           echo "✅ Verificando ExportOptions.plist..."
           test -f ExportOptions.plist || (echo "❌ No se encontró ExportOptions.plist" && exit 1)
-
-      # 6️⃣ Archive + export con firma automática
-      - name: 📦 Archive & Export IPA
-        env:
-          TEAM_ID: ${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }}
+      - name: 🕵️ List provisioning profiles
         run: |
-          set -e
-          cd ios
+          security find-identity -v
+          ls ~/Library/MobileDevice/Provisioning\ Profiles
+
+            # 6️⃣ Archive + export con firma automática
+            - name: 📦 Archive & Export IPA
+              env:
+                TEAM_ID: ${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }}
+              run: |
+                set -e
+                cd ios
 
           xcodebuild clean archive \
           -workspace Zenti.xcworkspace \
