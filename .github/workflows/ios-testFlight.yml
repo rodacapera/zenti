@@ -150,7 +150,20 @@ jobs:
             -exportPath build \
             -exportOptionsPlist ./ExportOptions.plist \
             -allowProvisioningUpdates
+      # 🔍 Mostrar errores recientes del archivo de log
+      - name: 🔍 Mostrar errores recientes del build
+        if: failure()
+        run: |
+          echo "🛑 Build falló. Mostrando últimos errores:"
+          tail -n 100 ios/xcodebuild.log
 
+      # 💾 Guardar log de build como artefacto
+      - name: 💾 Guardar log de xcodebuild
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: xcodebuild-log
+          path: ios/xcodebuild.log
       # 7️⃣ Verificar IPA generado
       - name: 🔍 Verificar IPA generado
         run: |
