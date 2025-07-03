@@ -136,13 +136,14 @@ jobs:
           cd ios
 
           xcodebuild clean archive \
-            -workspace Zenti.xcworkspace \
-            -scheme Zenti \
-            -configuration Release \
-            -archivePath build/Zenti.xcarchive \
-            DEVELOPMENT_TEAM=$TEAM_ID \
-            CODE_SIGN_STYLE=Automatic \
-            -allowProvisioningUpdates
+          -workspace Zenti.xcworkspace \
+          -scheme Zenti \
+          -configuration Release \
+          -archivePath build/Zenti.xcarchive \
+          DEVELOPMENT_TEAM=$TEAM_ID \
+          CODE_SIGN_STYLE=Automatic \
+          -allowProvisioningUpdates \
+          | tee xcodebuild.log | xcpretty --color
 
           xcodebuild -exportArchive \
             -archivePath build/Zenti.xcarchive \
