@@ -119,8 +119,12 @@ jobs:
           ls -la ios
 
       # 5️⃣ Validar ExportOptions.plist
-      - name: 🧾 Validar ExportOptions.plist
+      - name: 🔍 Verificar que ExportOptions.plist exista
+        working-directory: ios
         run: |
+          echo "📄 Archivos disponibles:"
+          ls -la
+          echo "✅ Verificando ExportOptions.plist..."
           test -f ExportOptions.plist || (echo "❌ No se encontró ExportOptions.plist" && exit 1)
 
       # 6️⃣ Archive + export con firma automática
