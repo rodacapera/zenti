@@ -113,6 +113,11 @@ jobs:
             -configuration Release \
             -showBuildSettings | grep -E "(CODE_SIGN_STYLE|DEVELOPMENT_TEAM|CODE_SIGN_IDENTITY)"
 
+      - name: 🔍 Debug-> mostrar contenido de ios/
+        run: |
+          echo "Archivos en ios/:"
+          ls -la ios
+
       # 5️⃣ Validar ExportOptions.plist
       - name: 🧾 Validar ExportOptions.plist
         run: |
