@@ -121,7 +121,7 @@ jobs:
       # 5️⃣ Validar ExportOptions.plist
       - name: 🧾 Validar ExportOptions.plist
         run: |
-          test -f ios/ExportOptions.plist || (echo "❌ No se encontró ExportOptions.plist" && exit 1)
+          test -f ExportOptions.plist || (echo "❌ No se encontró ExportOptions.plist" && exit 1)
 
       # 6️⃣ Archive + export con firma automática
       - name: 📦 Archive & Export IPA
