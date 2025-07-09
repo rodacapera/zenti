@@ -138,35 +138,35 @@ jobs:
           ls -la
           echo "✅ Verificando ExportOptions.plist..."
           test -f ExportOptions.plist || (echo "❌ No se encontró ExportOptions.plist" && exit 1)
+
       - name: 🕵️ List provisioning profiles
         run: |
           security find-identity -v
-          ls ~/Library/MobileDevice/Provisioning\ Profiles
+          ls ~/Library/MobileDevice/Provisioning\ Profiles || echo "No hay perfiles locales, se usará firma automática"
 
-            # 6️⃣ Archive + export con firma automática
-            - name: 📦 Archive & Export IPA
-              env:
-                TEAM_ID: ${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }}
-              run: |
-                set -e
-                cd ios
+      # 6️⃣ Archive + export con firma automática
+      - name: 📦 Archive & Export IPA
+        env:
+          TEAM_ID: ${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }}
+        run: |
+          set -e
+          cd ios
 
           xcodebuild clean archive \
-          -workspace Zenti.xcworkspace \
-          -scheme Zenti \
-          -configuration Release \
-          -archivePath build/Zenti.xcarchive \
-          DEVELOPMENT_TEAM=$TEAM_ID \
-          CODE_SIGN_STYLE=Automatic \
-          -allowProvisioningUpdates \
-          | tee xcodebuild.log | xcpretty --color
+            -workspace Zenti.xcworkspace \
+            -scheme Zenti \
+            -configuration Release \
+            -archivePath build/Zenti.xcarchive \
+            DEVELOPMENT_TEAM=$TEAM_ID \
+            CODE_SIGN_STYLE=Automatic \
+            -allowProvisioningUpdates \
+            | tee xcodebuild.log | xcpretty --color
 
           xcodebuild -exportArchive \
             -archivePath build/Zenti.xcarchive \
             -exportPath build \
             -exportOptionsPlist ./ExportOptions.plist \
             -allowProvisioningUpdates
-
       # 🔍 Mostrar errores recientes del archivo de log
       - name: 🔍 Mostrar errores recientes del build
         if: failure()
