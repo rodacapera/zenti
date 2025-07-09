@@ -111,6 +111,20 @@ jobs:
 
       - name: 🔍 Verificar existencia de logs de Fastlane
         run: ls -l /Users/runner/Library/Logs/gym || echo "No existe el directorio de logs"
+
+      - name: 🔍 Mostrar logs de Fastlane si existen
+        if: failure()
+        run: |
+          if [ -d "/Users/runner/Library/Logs/gym" ]; then
+            echo "=== Contenido de /Users/runner/Library/Logs/gym ==="
+            ls -l /Users/runner/Library/Logs/gym
+            cat /Users/runner/Library/Logs/gym/*.log || true
+          fi
+          if [ -d "ios/fastlane/logs" ]; then
+            echo "=== Contenido de ios/fastlane/logs ==="
+            ls -l ios/fastlane/logs
+            cat ios/fastlane/logs/*.log || true
+          fi
       - name: 💾 Guardar log de Fastlane
         if: always()
         uses: actions/upload-artifact@v4
