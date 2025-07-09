@@ -7,10 +7,9 @@ platform :ios do
       scheme: "Zenti",
       export_method: "app-store",
       export_options: {
-        provisioningProfiles: {
-          "com.teranov.zentiapp" => "match AppStore com.teranov.zentiapp"
-        }
-      }
+        signingStyle: "automatic"
+      },
+      export_xcargs: "-allowProvisioningUpdates"
     )
     upload_to_testflight
   end

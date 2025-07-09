@@ -48,7 +48,7 @@ jobs:
             echo "❌ No se encontró ‘Zenti’ en los schemes compartidos" && exit 1
           fi
 
-      # 3️⃣ Dependencias y versionado
+      # 3️⃣ Dependencias JS
       - name: 🔧 Setup Node.js
         uses: actions/setup-node@v3
         with:
@@ -63,14 +63,15 @@ jobs:
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
       - run: yarn install --frozen-lockfile
 
-      - name: Install CocoaPods
-        run: sudo gem install cocoapods
-
-      - name: 💾 Cache & install CocoaPods
+      # 4️⃣ CocoaPods
+      - name: 💾 Cache CocoaPods
         uses: actions/cache@v3
         with:
           path: ios/Pods
           key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
+
+      - name: Install CocoaPods
+        run: sudo gem install cocoapods
 
       - name: Clean CocoaPods and DerivedData
         run: |
@@ -87,6 +88,7 @@ jobs:
           cd ios
           pod install
 
+      # 5️⃣ Versionado
       - name: 🚀 Bump version & build number
         run: |
           cd ios
@@ -94,7 +96,7 @@ jobs:
           xcrun agvtool new-version -all ${{ github.run_number }}
           cd ..
 
-      # 4️⃣ Seleccionar Xcode 16.2
+      # 6️⃣ Seleccionar Xcode
       - name: 🔨 Seleccionar Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
@@ -105,11 +107,22 @@ jobs:
           xcode-select -p
           xcodebuild -version
 
-      # Instalar Fastlane
+      # 7️⃣ Instalar Fastlane
       - name: 📦 Instalar Fastlane
         run: sudo gem install fastlane -NV
 
+      # 8️⃣ Build y subir a TestFlight con Fastlane (firma automática)
+      - name: 🚀 Build y subir a TestFlight con Fastlane
+        env:
+          APPLE_ID: ${{ secrets.APP_STORE_CONNECT_USERNAME }}
+          FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
+        run: |
+          cd ios
+          fastlane beta
+
+      # 9️⃣ Logs de Fastlane (solo si falla)
       - name: 🔍 Verificar existencia de logs de Fastlane
+        if: failure()
         run: ls -l /Users/runner/Library/Logs/gym || echo "No existe el directorio de logs"
 
       - name: 🔍 Mostrar logs de Fastlane si existen
@@ -125,6 +138,7 @@ jobs:
             ls -l ios/fastlane/logs
             cat ios/fastlane/logs/*.log || true
           fi
+
       - name: 💾 Guardar log de Fastlane
         if: always()
         uses: actions/upload-artifact@v4
@@ -134,11 +148,3 @@ jobs:
             /Users/runner/Library/Logs/gym
             ios/fastlane/logs
           if-no-files-found: warn
-      # 🚀 Build y subir a TestFlight con Fastlane (firma automática)
-      - name: 🚀 Build y subir a TestFlight con Fastlane
-        env:
-          APPLE_ID: ${{ secrets.APP_STORE_CONNECT_USERNAME }}
-          FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
-        run: |
-          cd ios
-          fastlane beta
