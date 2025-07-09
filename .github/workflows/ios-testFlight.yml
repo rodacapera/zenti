@@ -109,12 +109,17 @@ jobs:
       - name: 📦 Instalar Fastlane
         run: sudo gem install fastlane -NV
 
+      - name: 🔍 Verificar existencia de logs de Fastlane
+        run: ls -l /Users/runner/Library/Logs/gym || echo "No existe el directorio de logs"
       - name: 💾 Guardar log de Fastlane
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: fastlane-gym-log
-          path: /Users/runner/Library/Logs/gym
+          path: |
+            /Users/runner/Library/Logs/gym
+            ios/fastlane/logs
+          if-no-files-found: warn
       # 🚀 Build y subir a TestFlight con Fastlane (firma automática)
       - name: 🚀 Build y subir a TestFlight con Fastlane
         env:
