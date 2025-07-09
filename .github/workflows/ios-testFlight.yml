@@ -105,115 +105,15 @@ jobs:
           xcode-select -p
           xcodebuild -version
 
-      - name: 🧪 Verificar configuración de firma
-        run: |
-          cd ios
-          xcodebuild -workspace Zenti.xcworkspace \
-            -scheme Zenti \
-            -configuration Release \
-            -showBuildSettings | grep -E "(CODE_SIGN_STYLE|DEVELOPMENT_TEAM|CODE_SIGN_IDENTITY)"
-      - name: 📄 Instalar provisioning profile
-        run: |
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          echo "${{ secrets.IOS_PROFILE_BASE64 }}" | base64 -d > ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
-      # ✅ NUEVO: Login con App Store Connect
-      - name: 🔑 Login con App Store Connect (firma automática)
+      # Instalar Fastlane
+      - name: 📦 Instalar Fastlane
+        run: sudo gem install fastlane -NV
+
+      # 🚀 Build y subir a TestFlight con Fastlane (firma automática)
+      - name: 🚀 Build y subir a TestFlight con Fastlane
         env:
           APPLE_ID: ${{ secrets.APP_STORE_CONNECT_USERNAME }}
-          APP_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
+          FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
         run: |
-          echo "🔐 Login a App Store Connect..."
-          xcrun altool --validate-app \
-            --username "$APPLE_ID" \
-            --password "$APP_SPECIFIC_PASSWORD" \
-            --file ios/GoogleService-Info.plist \
-            --type ios || true
-
-      - name: 🔍 Debug-> mostrar contenido de ios/
-        run: |
-          echo "Archivos en ios/:"
-          ls -la ios
-
-      # 5️⃣ Validar ExportOptions.plist
-      - name: 🔍 Verificar que ExportOptions.plist exista
-        working-directory: ios
-        run: |
-          echo "📄 Archivos disponibles:"
-          ls -la
-          echo "✅ Verificando ExportOptions.plist..."
-          test -f ExportOptions.plist || (echo "❌ No se encontró ExportOptions.plist" && exit 1)
-
-      - name: 🕵️ List provisioning profiles
-        run: |
-          security find-identity -v
-          ls ~/Library/MobileDevice/Provisioning\ Profiles || echo "No hay perfiles locales, se usará firma automática"
-
-      # 6️⃣ Archive + export con firma automática
-      - name: 📦 Archive & Export IPA
-        env:
-          TEAM_ID: ${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }}
-        run: |
-          set -e
           cd ios
-
-          xcodebuild clean archive \
-            -workspace Zenti.xcworkspace \
-            -scheme Zenti \
-            -configuration Release \
-            -archivePath build/Zenti.xcarchive \
-            DEVELOPMENT_TEAM=$TEAM_ID \
-            CODE_SIGN_STYLE=Automatic \
-            -allowProvisioningUpdates \
-            | tee xcodebuild.log | xcpretty --color
-
-          xcodebuild -exportArchive \
-            -archivePath build/Zenti.xcarchive \
-            -exportPath build \
-            -exportOptionsPlist ./ExportOptions.plist \
-            -allowProvisioningUpdates
-      # 🔍 Mostrar errores recientes del archivo de log
-      - name: 🔍 Mostrar últimos errores del build
-        if: failure()
-        run: |
-          echo "🛑 Build falló. Mostrando últimos errores:"
-          tail -n 200 ios/xcodebuild.log || echo "No existe el log"
-      - name: 🔍 Mostrar log completo de xcodebuild si falla
-        if: failure()
-        run: cat ios/xcodebuild.log || echo "No existe el log"
-      - name: 🔍 Verificar schemes compartidos
-        run: ls -l ios/Zenti.xcworkspace/xcshareddata/xcschemes/
-      - name: 🔍 Listar archivos en ios antes del build
-        run: ls -l ios
-      - name: 🔍 Mostrar errores recientes del build
-        if: failure()
-        run: |
-          echo "🛑 Build falló. Mostrando últimos errores:"
-          tail -n 100 ios/xcodebuild.log
-
-      # 💾 Guardar log de build como artefacto
-      - name: 💾 Guardar log de xcodebuild
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: xcodebuild-log
-          path: ios/xcodebuild.log
-
-      # 7️⃣ Verificar IPA generado
-      - name: 🔍 Verificar IPA generado
-        run: |
-          ls -lh ios/build
-          test -f ios/build/*.ipa || (echo "❌ No se generó Zenti.ipa" && exit 1)
-
-      # 8️⃣ Subir a TestFlight
-      - name: 🚀 Upload to TestFlight
-        env:
-          APPLE_ID: ${{ secrets.APP_STORE_CONNECT_USERNAME }}
-          APP_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
-        run: |
-          set -x
-          xcrun altool \
-            --upload-app --type ios \
-            --file ios/build/Zenti.ipa \
-            --username "$APPLE_ID" \
-            --password "$APP_SPECIFIC_PASSWORD" \
-            --output-format xml || (echo "❌ Falló la subida a TestFlight" && exit 1)
+          fastlane beta
