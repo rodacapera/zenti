@@ -123,7 +123,8 @@ jobs:
           xcrun altool --validate-app \
             --username "$APPLE_ID" \
             --password "$APP_SPECIFIC_PASSWORD" \
-            --file ios/GoogleService-Info.plist || true
+            --file ios/GoogleService-Info.plist \
+            --type ios || true
 
       - name: 🔍 Debug-> mostrar contenido de ios/
         run: |
@@ -168,6 +169,11 @@ jobs:
             -exportOptionsPlist ./ExportOptions.plist \
             -allowProvisioningUpdates
       # 🔍 Mostrar errores recientes del archivo de log
+      - name: 🔍 Mostrar últimos errores del build
+        if: failure()
+        run: |
+          echo "🛑 Build falló. Mostrando últimos errores:"
+          tail -n 200 ios/xcodebuild.log || echo "No existe el log"
       - name: 🔍 Mostrar log completo de xcodebuild si falla
         if: failure()
         run: cat ios/xcodebuild.log || echo "No existe el log"
