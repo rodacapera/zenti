@@ -168,6 +168,13 @@ jobs:
             -exportOptionsPlist ./ExportOptions.plist \
             -allowProvisioningUpdates
       # 🔍 Mostrar errores recientes del archivo de log
+      - name: 🔍 Mostrar log completo de xcodebuild si falla
+        if: failure()
+        run: cat ios/xcodebuild.log || echo "No existe el log"
+      - name: 🔍 Verificar schemes compartidos
+        run: ls -l ios/Zenti.xcworkspace/xcshareddata/xcschemes/
+      - name: 🔍 Listar archivos en ios antes del build
+        run: ls -l ios
       - name: 🔍 Mostrar errores recientes del build
         if: failure()
         run: |
