@@ -186,7 +186,7 @@ jobs:
       - name: 🔍 Verificar IPA generado
         run: |
           ls -lh ios/build
-          test -f ios/build/Zenti.ipa || (echo "❌ No se generó Zenti.ipa" && exit 1)
+          test -f ios/build/*.ipa || (echo "❌ No se generó Zenti.ipa" && exit 1)
 
       # 8️⃣ Subir a TestFlight
       - name: 🚀 Upload to TestFlight
@@ -194,9 +194,10 @@ jobs:
           APPLE_ID: ${{ secrets.APP_STORE_CONNECT_USERNAME }}
           APP_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
         run: |
+          set -x
           xcrun altool \
             --upload-app --type ios \
             --file ios/build/Zenti.ipa \
             --username "$APPLE_ID" \
             --password "$APP_SPECIFIC_PASSWORD" \
-            --output-format xml
+            --output-format xml || (echo "❌ Falló la subida a TestFlight" && exit 1)
