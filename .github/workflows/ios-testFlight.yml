@@ -112,7 +112,10 @@ jobs:
             -scheme Zenti \
             -configuration Release \
             -showBuildSettings | grep -E "(CODE_SIGN_STYLE|DEVELOPMENT_TEAM|CODE_SIGN_IDENTITY)"
-
+      - name: 📄 Instalar provisioning profile
+        run: |
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "${{ secrets.IOS_PROFILE_BASE64 }}" | base64 -d > ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
       # ✅ NUEVO: Login con App Store Connect
       - name: 🔑 Login con App Store Connect (firma automática)
         env:
