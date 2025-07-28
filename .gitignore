@@ -49,6 +49,7 @@ buck-out/
 
 # Vendor
 vendor/
+ios/vendor/
 
 # Keystore
 android/app/release.keystore

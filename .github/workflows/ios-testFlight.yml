@@ -108,8 +108,11 @@ jobs:
           xcodebuild -version
 
       # 7️⃣ Instalar Fastlane
-      - name: 📦 Instalar Fastlane
-        run: sudo gem install fastlane -NV
+      - name: 📦 Instalar Bundler y dependencias Ruby
+        run: |
+          cd ios
+          gem install bundler
+          bundle install
 
       # 8️⃣ Build y subir a TestFlight con Fastlane (firma automática)
       - name: 🚀 Build y subir a TestFlight con Fastlane
@@ -119,7 +122,7 @@ jobs:
           FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
         run: |
           cd ios
-          fastlane beta
+          bundle exec fastlane beta
 
       # 9️⃣ Logs de Fastlane (solo si falla)
       - name: 🔍 Verificar existencia de logs de Fastlane

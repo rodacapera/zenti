@@ -4,21 +4,27 @@ platform :ios do
   desc "🚀 Compilar y subir a TestFlight"
 
   lane :beta do
-    # 👷‍♂️ Compilar la app
+    UI.message("🚀 Compilando la app Zenti con Fastlane")
+
     build_app(
       scheme: "Zenti",
       export_method: "app-store",
       export_options: {
         method: "app-store",
+        provisioningProfiles: {
+          "com.teranov.zentiapp" => "match AppStore com.teranov.zentiapp"
+        },
         teamID: "XK4QBKULJR",
-        signingStyle: "automatic",
         uploadSymbols: true,
         compileBitcode: true
       },
       clean: true,
+      allowProvisioningUpdates: true,
+      output_directory: "build"
     )
 
-    # ☁️ Subir a TestFlight
+    UI.message("☁️ Subiendo a TestFlight para #{ENV["APPLE_ID"]}")
+
     upload_to_testflight(
       username: ENV["APPLE_ID"],
       skip_waiting_for_build_processing: true,
