@@ -6,16 +6,17 @@ platform :ios do
   lane :beta do
     # 👷‍♂️ Compilar la app
     build_app(
-      scheme: "Zenti", # Asegúrate que este scheme exista y esté compartido
+      scheme: "Zenti",
       export_method: "app-store",
       export_options: {
+        method: "app-store",
+        teamID: "XK4QBKULJR",
         signingStyle: "automatic",
-        compileBitcode: true,
         uploadSymbols: true,
-        teamID: "XK4QBKULJR"
+        compileBitcode: true
       },
-      output_directory: "./build", # Opcional, dónde guardar el .ipa
-      output_name: "Zenti.ipa"
+      clean: true,
+      allowProvisioningUpdates: true # 👈 IMPORTANTE
     )
 
     # ☁️ Subir a TestFlight

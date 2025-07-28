@@ -114,6 +114,7 @@ jobs:
       # 8️⃣ Build y subir a TestFlight con Fastlane (firma automática)
       - name: 🚀 Build y subir a TestFlight con Fastlane
         env:
+          FASTLANE_SESSION: ${{ secrets.FASTLANE_SESSION }}
           APPLE_ID: ${{ secrets.APP_STORE_CONNECT_USERNAME }}
           FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
         run: |
