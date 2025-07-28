@@ -1,16 +1,28 @@
 default_platform(:ios)
 
 platform :ios do
-  desc "Build y subir a TestFlight"
+  desc "🚀 Compilar y subir a TestFlight"
+
   lane :beta do
+    # 👷‍♂️ Compilar la app
     build_app(
-      scheme: "Zenti",
+      scheme: "Zenti", # Asegúrate que este scheme exista y esté compartido
       export_method: "app-store",
       export_options: {
-        signingStyle: "automatic"
+        signingStyle: "automatic",
+        compileBitcode: true,
+        uploadSymbols: true,
+        teamID: "XK4QBKULJR"
       },
-      export_xcargs: "-allowProvisioningUpdates"
+      output_directory: "./build", # Opcional, dónde guardar el .ipa
+      output_name: "Zenti.ipa"
     )
-    upload_to_testflight
+
+    # ☁️ Subir a TestFlight
+    upload_to_testflight(
+      username: ENV["APPLE_ID"],
+      skip_waiting_for_build_processing: true,
+      app_identifier: "com.teranov.zentiapp"
+    )
   end
 end
