@@ -139,6 +139,12 @@ jobs:
             cat ios/fastlane/logs/*.log || true
           fi
 
+      - name: 🪵 Mostrar log detallado de Fastlane
+        if: failure()
+        run: |
+          echo "📄 Mostrando contenido del log de gym:"
+          cat /Users/runner/Library/Logs/gym/Zenti-Zenti.log || echo "⚠️ Log no encontrado"
+
       - name: 💾 Guardar log de Fastlane
         if: always()
         uses: actions/upload-artifact@v4
