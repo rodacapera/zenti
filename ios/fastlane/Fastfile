@@ -19,7 +19,6 @@ platform :ios do
         compileBitcode: true
       },
       clean: true,
-      allowProvisioningUpdates: true,
       output_directory: "build"
     )
 
