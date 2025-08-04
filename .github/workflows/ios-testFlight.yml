@@ -78,7 +78,7 @@ jobs:
       - name: 🔨 Seleccionar Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: '16.4'
+          xcode-version: '16.2'
 
       - name: 📋 Ver versión de Xcode
         run: |
