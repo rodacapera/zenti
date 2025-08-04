@@ -16,5 +16,10 @@
   <string>automatic</string>
   <key>stripSwiftSymbols</key>
   <true/>
+  <key>provisioningProfiles</key>
+  <dict>
+    <key>com.teranov.zentiapp</key>
+    <string>match AppStore com.teranov.zentiapp</string>
+  </dict>
 </dict>
 </plist>

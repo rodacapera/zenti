@@ -6,24 +6,38 @@ platform :ios do
   lane :beta do
     UI.message("🚀 Compilando la app Zenti con Fastlane")
 
+    # 🔐 Descargar certificados y perfiles desde el repositorio privado
+    match(
+      type: "appstore",
+      app_identifier: "com.teranov.zentiapp",
+      username: ENV["APPLE_ID"],
+      team_id: ENV["APPLE_DEVELOPMENT_TEAM_ID"],
+      git_url: "https://github.com/rodacapera/certificates-zenti",
+      git_basic_authorization: ENV["MATCH_GIT_BASIC_AUTHORIZATION"],
+      readonly: true
+    )
+
+    # 🏗️ Construcción de la app
     build_app(
       scheme: "Zenti",
       export_method: "app-store",
       export_options: {
         method: "app-store",
+        signingStyle: "automatic",
         provisioningProfiles: {
           "com.teranov.zentiapp" => "match AppStore com.teranov.zentiapp"
         },
-        teamID: "XK4QBKULJR",
+        teamID: ENV["APPLE_DEVELOPMENT_TEAM_ID"],
+        compileBitcode: true,
         uploadSymbols: true,
-        compileBitcode: true
+        stripSwiftSymbols: true
       },
       clean: true,
       output_directory: "build"
     )
 
+    # ☁️ Subir a TestFlight
     UI.message("☁️ Subiendo a TestFlight para #{ENV["APPLE_ID"]}")
-
     upload_to_testflight(
       username: ENV["APPLE_ID"],
       skip_waiting_for_build_processing: true,
