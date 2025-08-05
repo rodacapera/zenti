@@ -50,14 +50,24 @@ jobs:
           path: ios/Pods
           key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
 
-      - name: Install CocoaPods
-        run: sudo gem install cocoapods
-
-      - name: Install Pods
+      - name: 📦 Instalar Bundler y dependencias Ruby
         run: |
-          echo "📦 Installing pods..."
           cd ios
-          pod install
+          gem install bundler --silent
+          bundle install --jobs 4 --retry 3 --quiet
+
+      - name: 🧹 Limpiar Pods y DerivedData
+        run: |
+          echo "🧹 Limpiando Pods y DerivedData..."
+          cd ios
+          rm -rf Pods
+          rm -rf ~/Library/Developer/Xcode/DerivedData/*
+          rm -f Podfile.lock
+
+      - name: 📦 Instalar Pods
+        run: |
+          cd ios
+          bundle exec pod install
 
       - name: 🚀 Bump version & build number
         run: |
@@ -75,12 +85,6 @@ jobs:
         run: |
           xcode-select -p
           xcodebuild -version
-
-      - name: 📦 Instalar Bundler y dependencias Ruby
-        run: |
-          cd ios
-          gem install bundler --silent
-          bundle install --jobs 4 --retry 3 --quiet
 
       - name: 🚀 Build y subir a TestFlight con Fastlane
         env:
