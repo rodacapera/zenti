@@ -53,15 +53,6 @@ jobs:
       - name: Install CocoaPods
         run: sudo gem install cocoapods
 
-      - name: Clean CocoaPods and DerivedData
-        run: |
-          echo "🧹 Cleaning Pods and DerivedData..."
-          cd ios
-          pod deintegrate || true
-          rm -rf Pods
-          rm -rf ~/Library/Developer/Xcode/DerivedData/*
-          rm -f Podfile.lock
-
       - name: Install Pods
         run: |
           echo "📦 Installing pods..."
@@ -88,12 +79,13 @@ jobs:
       - name: 📦 Instalar Bundler y dependencias Ruby
         run: |
           cd ios
-          gem install bundler
-          bundle install
+          gem install bundler --silent
+          bundle install --jobs 4 --retry 3 --quiet
 
       - name: 🚀 Build y subir a TestFlight con Fastlane
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
+          FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
           APPLE_DEVELOPMENT_TEAM_ID: ${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }}
