@@ -13,8 +13,8 @@ platform :ios do
       username: ENV["APPLE_ID"],
       team_id: ENV["APPLE_DEVELOPMENT_TEAM_ID"],
       git_url: "https://github.com/rodacapera/certificates-zenti",
-      git_basic_authorization: ENV["MATCH_GIT_BASIC_AUTHORIZATION"]
-      # No pongas readonly: true para que pueda crear perfiles si hace falta
+      git_basic_authorization: ENV["MATCH_GIT_BASIC_AUTHORIZATION"],
+      readonly: true,
     )
 
     # 🏗️ Construcción de la app
