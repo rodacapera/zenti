@@ -14,7 +14,7 @@ platform :ios do
       team_id: ENV["APPLE_DEVELOPMENT_TEAM_ID"],
       git_url: "https://github.com/rodacapera/certificates-zenti",
       git_basic_authorization: ENV["MATCH_GIT_BASIC_AUTHORIZATION"],
-      readonly: true,
+      readonly: true
     )
 
     # 🏗️ Construcción de la app
@@ -22,15 +22,17 @@ platform :ios do
       scheme: "Zenti",
       export_method: "app-store",
       export_options: {
-        method: "app-store",
-        signingStyle: "automatic", # Firma automática
+        provisioningProfiles: {
+          "com.teranov.zentiapp" => "match AppStore com.teranov.zentiapp"
+        },
+        signingStyle: "automatic",
         teamID: ENV["APPLE_DEVELOPMENT_TEAM_ID"],
         compileBitcode: true,
         uploadSymbols: true,
         stripSwiftSymbols: true
       },
       clean: true,
-      xcargs: "-allowProvisioningUpdates", # Necesario para que Xcode cree perfiles si hace falta
+      xcargs: "-allowProvisioningUpdates",
       output_directory: "build"
     )
 

@@ -93,8 +93,7 @@ jobs:
 
       - name: 🚀 Build y subir a TestFlight con Fastlane
         env:
-          FASTLANE_USER: ${{ secrets.APPLE_ID }} # 👈 Apple ID
-          FASTLANE_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }} # 👈 Contraseña específica de app
+          APPLE_ID: ${{ secrets.APPLE_ID }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
           APPLE_DEVELOPMENT_TEAM_ID: ${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }}
