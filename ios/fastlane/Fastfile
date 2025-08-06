@@ -1,10 +1,12 @@
 default_platform(:ios)
 
 platform :ios do
-  desc "🏗️ Compilar la app y generar el IPA"
-  lane :build_only do
-    UI.message("🔐 Configurando keychain para certificados…")
+  desc "🚀 Compilar y subir a TestFlight"
 
+  lane :beta do
+    UI.message("🚀 Preparando keychain para certificados…")
+
+    # 1) Configuramos un keychain temporal
     keychain_name = "build.keychain"
     keychain_password = ENV["MATCH_PASSWORD"]
 
@@ -17,6 +19,9 @@ platform :ios do
       lock_when_sleeps: false
     )
 
+    UI.message("🔓 Keychain '#{keychain_name}' listo y desbloqueado")
+
+    # 🔐 Descargar certificados y perfiles desde el repositorio privado (modo readonly)
     match(
       type: "appstore",
       app_identifier: "com.teranov.zentiapp",
@@ -29,6 +34,9 @@ platform :ios do
       keychain_password: keychain_password
     )
 
+    UI.message("🔐 Certificados y perfiles instalados en '#{keychain_name}'")
+
+    # 🏗️ Construcción de la app
     build_app(
       scheme: "Zenti",
       export_method: "app-store",
@@ -37,7 +45,7 @@ platform :ios do
           "com.teranov.zentiapp" => "match AppStore com.teranov.zentiapp"
         },
         method: "app-store",
-        signingStyle: "manual",
+        signingStyle: "manual", # ← ¡CAMBIO CRÍTICO!
         teamID: ENV["APPLE_DEVELOPMENT_TEAM_ID"],
         compileBitcode: true,
         uploadSymbols: true,
@@ -47,21 +55,13 @@ platform :ios do
       output_directory: "build",
       export_team_id: ENV["APPLE_DEVELOPMENT_TEAM_ID"]
     )
-  end
 
-  desc "☁️ Subir IPA generada a TestFlight"
-  lane :upload_only do
+    # ☁️ Subir a TestFlight
+    UI.message("☁️ Subiendo a TestFlight para #{ENV["APPLE_ID"]}")
     upload_to_testflight(
       username: ENV["APPLE_ID"],
       skip_waiting_for_build_processing: true,
-      app_identifier: "com.teranov.zentiapp",
-      ipa: "build/Zenti.ipa"
+      app_identifier: "com.teranov.zentiapp"
     )
-  end
-
-  desc "🚀 Lane completa: compila y sube"
-  lane :beta do
-    build_only
-    upload_only
   end
 end
