@@ -76,15 +76,16 @@ jobs:
           xcrun agvtool new-version -all ${{ github.run_number }}
           cd ..
 
-      - name: 🔨 Seleccionar Xcode
+      - name: 🔨 Seleccionar Xcode 16.2
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: "15.4"
+          xcode-version: "16.2"
 
-      - name: 📋 Ver versión de Xcode
+      - name: 📋 Verificar versión de Xcode y SDK disponibles
         run: |
           xcode-select -p
           xcodebuild -version
+          xcodebuild -showsdks
 
       - name: 🚀 Build y subir a TestFlight con Fastlane
         env:
