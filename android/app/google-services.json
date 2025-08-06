@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "487270453896",
+    "project_id": "zenti-cad73",
+    "storage_bucket": "zenti-cad73.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:487270453896:android:458a22fd65233577d3053d",
+        "android_client_info": {
+          "package_name": "com.teranov.zentiapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCWIQ_uv8NmVUsJUzKNXnd1wSlP8mTVt0Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
