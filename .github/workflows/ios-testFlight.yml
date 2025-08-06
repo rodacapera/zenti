@@ -95,11 +95,11 @@ jobs:
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
-          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
           APPLE_DEVELOPMENT_TEAM_ID: ${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }}
-          RCT_NO_LAUNCH_PACKAGER: "true" # Evita scripts innecesarios
-          CI: "true" # Desactiva Hermes y Fabric en Podfile
+          RCT_NO_LAUNCH_PACKAGER: "true" # ← CLAVE para evitar scripts innecesarios
+          CI: "true" # ← CLAVE para entornos CI/CD
         run: |
           cd ios
           bundle exec fastlane beta
