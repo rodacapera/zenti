@@ -56,13 +56,13 @@ jobs:
           gem install bundler --silent
           bundle install --jobs 4 --retry 3 --quiet
 
-      - name: 🧹 Limpiar Pods y DerivedData
+      - name: 🧨 Limpiar Pods, DerivedData y Caches
         run: |
-          echo "🧹 Limpiando Pods y DerivedData..."
-          cd ios
-          rm -rf Pods
-          rm -rf ~/Library/Developer/Xcode/DerivedData/*
-          rm -f Podfile.lock
+          echo "🧹 Limpieza agresiva para evitar errores en CI..."
+          rm -rf ~/Library/Developer/Xcode/DerivedData
+          rm -rf ~/Library/Caches/CocoaPods
+          rm -rf ios/Pods
+          rm -f ios/Podfile.lock
 
       - name: 📦 Instalar Pods
         run: |
@@ -76,16 +76,15 @@ jobs:
           xcrun agvtool new-version -all ${{ github.run_number }}
           cd ..
 
-      - name: 🔨 Seleccionar Xcode 16.2
+      - name: 🔨 Seleccionar Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: "16.2"
+          xcode-version: "16.2" # Usa Xcode 16.2 que sí soporta iOS 18.0
 
-      - name: 📋 Verificar versión de Xcode y SDK disponibles
+      - name: 📋 Ver versión de Xcode
         run: |
           xcode-select -p
           xcodebuild -version
-          xcodebuild -showsdks
 
       - name: 🚀 Build y subir a TestFlight con Fastlane
         env:
@@ -94,6 +93,8 @@ jobs:
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
           APPLE_DEVELOPMENT_TEAM_ID: ${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }}
+          RCT_NO_LAUNCH_PACKAGER: "true" # ← CLAVE para evitar scripts innecesarios
+          CI: "true" # ← CLAVE para entornos CI/CD
         run: |
           cd ios
           bundle exec fastlane beta
