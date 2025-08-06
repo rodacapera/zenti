@@ -1,6 +1,6 @@
 {
   "name": "React-hermes",
-  "version": "0.80.0",
+  "version": "0.80.2",
   "summary": "Hermes engine for React Native",
   "homepage": "https://reactnative.dev/",
   "license": "MIT",
@@ -10,7 +10,7 @@
   },
   "source": {
     "git": "https://github.com/facebook/react-native.git",
-    "tag": "v0.80.0"
+    "tag": "v0.80.2"
   },
   "public_header_files": "executor/HermesExecutorFactory.h",
   "source_files": [
@@ -39,55 +39,27 @@
   "header_dir": "reacthermes",
   "dependencies": {
     "React-cxxreact": [
-      "0.80.0"
+      "0.80.2"
     ],
     "React-jsiexecutor": [
-      "0.80.0"
+      "0.80.2"
     ],
-    "React-jsinspector": [
-
-    ],
-    "React-jsinspectorcdp": [
-
-    ],
-    "React-jsinspectortracing": [
-
-    ],
+    "React-jsinspector": [],
+    "React-jsinspectorcdp": [],
+    "React-jsinspectortracing": [],
     "React-perflogger": [
-      "0.80.0"
+      "0.80.2"
     ],
-    "hermes-engine": [
-
-    ],
-    "React-jsi": [
-
-    ],
-    "React-runtimeexecutor": [
-
-    ],
-    "glog": [
-
-    ],
-    "boost": [
-
-    ],
-    "DoubleConversion": [
-
-    ],
-    "fast_float": [
-
-    ],
-    "fmt": [
-
-    ],
-    "RCT-Folly": [
-
-    ],
-    "SocketRocket": [
-
-    ],
-    "RCT-Folly/Fabric": [
-
-    ]
+    "hermes-engine": [],
+    "React-jsi": [],
+    "React-runtimeexecutor": [],
+    "glog": [],
+    "boost": [],
+    "DoubleConversion": [],
+    "fast_float": [],
+    "fmt": [],
+    "RCT-Folly": [],
+    "SocketRocket": [],
+    "RCT-Folly/Fabric": []
   }
 }

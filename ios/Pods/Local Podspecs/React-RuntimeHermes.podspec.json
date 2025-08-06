@@ -1,6 +1,6 @@
 {
   "name": "React-RuntimeHermes",
-  "version": "0.80.0",
+  "version": "0.80.2",
   "summary": "The React Native Runtime.",
   "homepage": "https://reactnative.dev/",
   "license": "MIT",
@@ -10,7 +10,7 @@
   },
   "source": {
     "git": "https://github.com/facebook/react-native.git",
-    "tag": "v0.80.0"
+    "tag": "v0.80.2"
   },
   "source_files": "hermes/*.{cpp,h}",
   "header_dir": "react/runtime/hermes",
@@ -35,62 +35,24 @@
     "GCC_WARN_PEDANTIC": "YES"
   },
   "dependencies": {
-    "React-jsitracing": [
-
-    ],
-    "React-jsi": [
-
-    ],
-    "React-utils": [
-
-    ],
-    "React-RuntimeCore": [
-
-    ],
-    "React-featureflags": [
-
-    ],
-    "React-jsinspector": [
-
-    ],
-    "React-jsinspectorcdp": [
-
-    ],
-    "React-jsinspectortracing": [
-
-    ],
-    "React-hermes": [
-
-    ],
-    "hermes-engine": [
-
-    ],
-    "React-jsitooling": [
-
-    ],
-    "glog": [
-
-    ],
-    "boost": [
-
-    ],
-    "DoubleConversion": [
-
-    ],
-    "fast_float": [
-
-    ],
-    "fmt": [
-
-    ],
-    "RCT-Folly": [
-
-    ],
-    "SocketRocket": [
-
-    ],
-    "RCT-Folly/Fabric": [
-
-    ]
+    "React-jsitracing": [],
+    "React-jsi": [],
+    "React-utils": [],
+    "React-RuntimeCore": [],
+    "React-featureflags": [],
+    "React-jsinspector": [],
+    "React-jsinspectorcdp": [],
+    "React-jsinspectortracing": [],
+    "React-hermes": [],
+    "hermes-engine": [],
+    "React-jsitooling": [],
+    "glog": [],
+    "boost": [],
+    "DoubleConversion": [],
+    "fast_float": [],
+    "fmt": [],
+    "RCT-Folly": [],
+    "SocketRocket": [],
+    "RCT-Folly/Fabric": []
   }
 }

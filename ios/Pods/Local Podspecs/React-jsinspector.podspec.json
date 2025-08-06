@@ -1,6 +1,6 @@
 {
   "name": "React-jsinspector",
-  "version": "0.80.0",
+  "version": "0.80.2",
   "summary": "React Native subsystem for modern debugging over the Chrome DevTools Protocol (CDP)",
   "homepage": "https://reactnative.dev/",
   "license": "MIT",
@@ -10,7 +10,7 @@
   },
   "source": {
     "git": "https://github.com/facebook/react-native.git",
-    "tag": "v0.80.0"
+    "tag": "v0.80.2"
   },
   "source_files": "*.{cpp,h}",
   "header_dir": "jsinspector-modern",
@@ -31,53 +31,25 @@
     "DEFINES_MODULE": "YES"
   },
   "dependencies": {
-    "React-featureflags": [
-
-    ],
+    "React-featureflags": [],
     "React-runtimeexecutor": [
-      "0.80.0"
+      "0.80.2"
     ],
-    "React-jsi": [
-
-    ],
-    "React-jsinspectorcdp": [
-
-    ],
-    "React-jsinspectornetwork": [
-
-    ],
-    "React-jsinspectortracing": [
-
-    ],
+    "React-jsi": [],
+    "React-jsinspectorcdp": [],
+    "React-jsinspectornetwork": [],
+    "React-jsinspectortracing": [],
     "React-perflogger": [
-      "0.80.0"
+      "0.80.2"
     ],
-    "hermes-engine": [
-
-    ],
-    "glog": [
-
-    ],
-    "boost": [
-
-    ],
-    "DoubleConversion": [
-
-    ],
-    "fast_float": [
-
-    ],
-    "fmt": [
-
-    ],
-    "RCT-Folly": [
-
-    ],
-    "SocketRocket": [
-
-    ],
-    "RCT-Folly/Fabric": [
-
-    ]
+    "hermes-engine": [],
+    "glog": [],
+    "boost": [],
+    "DoubleConversion": [],
+    "fast_float": [],
+    "fmt": [],
+    "RCT-Folly": [],
+    "SocketRocket": [],
+    "RCT-Folly/Fabric": []
   }
 }
