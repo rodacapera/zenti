@@ -1,6 +1,6 @@
 {
   "name": "React-jserrorhandler",
-  "version": "0.80.0",
+  "version": "0.80.2",
   "summary": "-",
   "homepage": "https://reactnative.dev/",
   "license": "MIT",
@@ -10,7 +10,7 @@
   },
   "source": {
     "git": "https://github.com/facebook/react-native.git",
-    "tag": "v0.80.0"
+    "tag": "v0.80.2"
   },
   "header_dir": "jserrorhandler",
   "source_files": [
@@ -33,47 +33,19 @@
     ]
   },
   "dependencies": {
-    "React-jsi": [
-
-    ],
-    "React-cxxreact": [
-
-    ],
-    "ReactCommon/turbomodule/bridging": [
-
-    ],
-    "React-featureflags": [
-
-    ],
-    "React-debug": [
-
-    ],
-    "hermes-engine": [
-
-    ],
-    "glog": [
-
-    ],
-    "boost": [
-
-    ],
-    "DoubleConversion": [
-
-    ],
-    "fast_float": [
-
-    ],
-    "fmt": [
-
-    ],
-    "RCT-Folly": [
-
-    ],
-    "SocketRocket": [
-
-    ],
-    "RCT-Folly/Fabric": [
-
-    ]
+    "React-jsi": [],
+    "React-cxxreact": [],
+    "ReactCommon/turbomodule/bridging": [],
+    "React-featureflags": [],
+    "React-debug": [],
+    "hermes-engine": [],
+    "glog": [],
+    "boost": [],
+    "DoubleConversion": [],
+    "fast_float": [],
+    "fmt": [],
+    "RCT-Folly": [],
+    "SocketRocket": [],
+    "RCT-Folly/Fabric": []
   }
 }

@@ -8,6 +8,7 @@
 			<key>BinaryPath</key>
 			<string>hermes.framework/hermes</string>
 			<key>LibraryIdentifier</key>
+<<<<<<< Updated upstream
 			<string>ios-arm64_x86_64-simulator</string>
 			<key>LibraryPath</key>
 			<string>hermes.framework</string>
@@ -57,6 +58,92 @@
 			<string>hermes.framework/hermes</string>
 			<key>LibraryIdentifier</key>
 			<string>xros-arm64_x86_64-simulator</string>
+=======
+			<string>tvos-arm64_x86_64-simulator</string>
+>>>>>>> Stashed changes
+			<key>LibraryPath</key>
+			<string>hermes.framework</string>
+			<key>SupportedArchitectures</key>
+			<array>
+				<string>arm64</string>
+				<string>x86_64</string>
+			</array>
+			<key>SupportedPlatform</key>
+			<string>tvos</string>
+			<key>SupportedPlatformVariant</key>
+			<string>simulator</string>
+		</dict>
+		<dict>
+			<key>BinaryPath</key>
+			<string>hermes.framework/hermes</string>
+			<key>LibraryIdentifier</key>
+<<<<<<< Updated upstream
+			<string>xros-arm64</string>
+			<key>LibraryPath</key>
+			<string>hermes.framework</string>
+			<key>SupportedArchitectures</key>
+			<array>
+				<string>arm64</string>
+			</array>
+			<key>SupportedPlatform</key>
+			<string>xros</string>
+		</dict>
+		<dict>
+			<key>BinaryPath</key>
+			<string>hermes.framework/hermes</string>
+			<key>LibraryIdentifier</key>
+=======
+>>>>>>> Stashed changes
+			<string>tvos-arm64</string>
+			<key>LibraryPath</key>
+			<string>hermes.framework</string>
+			<key>SupportedArchitectures</key>
+			<array>
+				<string>arm64</string>
+			</array>
+			<key>SupportedPlatform</key>
+			<string>tvos</string>
+		</dict>
+		<dict>
+			<key>BinaryPath</key>
+			<string>hermes.framework/hermes</string>
+			<key>LibraryIdentifier</key>
+<<<<<<< Updated upstream
+			<string>tvos-arm64_x86_64-simulator</string>
+=======
+			<string>ios-arm64</string>
+			<key>LibraryPath</key>
+			<string>hermes.framework</string>
+			<key>SupportedArchitectures</key>
+			<array>
+				<string>arm64</string>
+			</array>
+			<key>SupportedPlatform</key>
+			<string>ios</string>
+		</dict>
+		<dict>
+			<key>BinaryPath</key>
+			<string>hermes.framework/hermes</string>
+			<key>LibraryIdentifier</key>
+			<string>ios-arm64_x86_64-simulator</string>
+			<key>LibraryPath</key>
+			<string>hermes.framework</string>
+			<key>SupportedArchitectures</key>
+			<array>
+				<string>arm64</string>
+				<string>x86_64</string>
+			</array>
+			<key>SupportedPlatform</key>
+			<string>ios</string>
+			<key>SupportedPlatformVariant</key>
+			<string>simulator</string>
+		</dict>
+		<dict>
+			<key>BinaryPath</key>
+			<string>hermes.framework/hermes</string>
+			<key>LibraryIdentifier</key>
+			<string>xros-arm64_x86_64-simulator</string>
+>>>>>>> Stashed changes
 			<key>LibraryPath</key>
 			<string>hermes.framework</string>
 			<key>SupportedArchitectures</key>
@@ -68,6 +155,25 @@
 			<string>xros</string>
 			<key>SupportedPlatformVariant</key>
 			<string>simulator</string>
+		</dict>
+<<<<<<< Updated upstream
+=======
+		<dict>
+			<key>BinaryPath</key>
+			<string>hermes.framework/Versions/0/hermes</string>
+			<key>LibraryIdentifier</key>
+			<string>ios-arm64_x86_64-maccatalyst</string>
+			<key>LibraryPath</key>
+			<string>hermes.framework</string>
+			<key>SupportedArchitectures</key>
+			<array>
+				<string>arm64</string>
+				<string>x86_64</string>
+			</array>
+			<key>SupportedPlatform</key>
+			<string>ios</string>
+			<key>SupportedPlatformVariant</key>
+			<string>maccatalyst</string>
 		</dict>
 		<dict>
 			<key>BinaryPath</key>
@@ -83,37 +189,7 @@
 			<key>SupportedPlatform</key>
 			<string>xros</string>
 		</dict>
-		<dict>
-			<key>BinaryPath</key>
-			<string>hermes.framework/hermes</string>
-			<key>LibraryIdentifier</key>
-			<string>tvos-arm64</string>
-			<key>LibraryPath</key>
-			<string>hermes.framework</string>
-			<key>SupportedArchitectures</key>
-			<array>
-				<string>arm64</string>
-			</array>
-			<key>SupportedPlatform</key>
-			<string>tvos</string>
-		</dict>
-		<dict>
-			<key>BinaryPath</key>
-			<string>hermes.framework/hermes</string>
-			<key>LibraryIdentifier</key>
-			<string>tvos-arm64_x86_64-simulator</string>
-			<key>LibraryPath</key>
-			<string>hermes.framework</string>
-			<key>SupportedArchitectures</key>
-			<array>
-				<string>arm64</string>
-				<string>x86_64</string>
-			</array>
-			<key>SupportedPlatform</key>
-			<string>tvos</string>
-			<key>SupportedPlatformVariant</key>
-			<string>simulator</string>
-		</dict>
+>>>>>>> Stashed changes
 	</array>
 	<key>CFBundlePackageType</key>
 	<string>XFWK</string>

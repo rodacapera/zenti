@@ -1,6 +1,6 @@
 {
   "name": "React-RCTFBReactNativeSpec",
-  "version": "0.80.0",
+  "version": "0.80.2",
   "summary": "FBReactNativeSpec for React Native.",
   "homepage": "https://reactnative.dev/",
   "license": "MIT",
@@ -10,14 +10,14 @@
   },
   "source": {
     "git": "https://github.com/facebook/react-native.git",
-    "tag": "v0.80.0"
+    "tag": "v0.80.2"
   },
   "source_files": "FBReactNativeSpec/**/*.{c,h,m,mm,S,cpp}",
-  "compiler_flags": "-DRCT_NEW_ARCH_ENABLED=1",
+  "compiler_flags": "",
   "header_dir": "FBReactNativeSpec",
   "module_name": "FBReactNativeSpec",
   "pod_target_xcconfig": {
-    "OTHER_CFLAGS": "$(inherited)  -DRCT_NEW_ARCH_ENABLED=1",
+    "OTHER_CFLAGS": "$(inherited) ",
     "CLANG_CXX_LANGUAGE_STANDARD": "c++20",
     "HEADER_SEARCH_PATHS": [
       "\"${PODS_CONFIGURATION_BUILD_DIR}/ReactCommon/ReactCommon.framework/Headers\"",
@@ -34,57 +34,23 @@
     ]
   },
   "dependencies": {
-    "React-jsi": [
-
-    ],
-    "React-jsiexecutor": [
-
-    ],
-    "RCTRequired": [
-
-    ],
-    "RCTTypeSafety": [
-
-    ],
-    "React-Core": [
-
-    ],
-    "React-NativeModulesApple": [
-
-    ],
-    "ReactCommon": [
-
-    ],
-    "hermes-engine": [
-
-    ],
-    "React-hermes": [
-
-    ],
-    "glog": [
-
-    ],
-    "boost": [
-
-    ],
-    "DoubleConversion": [
-
-    ],
-    "fast_float": [
-
-    ],
-    "fmt": [
-
-    ],
-    "RCT-Folly": [
-
-    ],
-    "SocketRocket": [
-
-    ],
-    "RCT-Folly/Fabric": [
-
-    ]
+    "React-jsi": [],
+    "React-jsiexecutor": [],
+    "RCTRequired": [],
+    "RCTTypeSafety": [],
+    "React-Core": [],
+    "React-NativeModulesApple": [],
+    "ReactCommon": [],
+    "hermes-engine": [],
+    "React-hermes": [],
+    "glog": [],
+    "boost": [],
+    "DoubleConversion": [],
+    "fast_float": [],
+    "fmt": [],
+    "RCT-Folly": [],
+    "SocketRocket": [],
+    "RCT-Folly/Fabric": []
   },
   "script_phases": [
     {
