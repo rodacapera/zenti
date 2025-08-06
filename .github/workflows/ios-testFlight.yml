@@ -6,10 +6,10 @@ on:
     branches:
       - develop
     paths:
-      - 'ios/**'
-      - 'Podfile'
-      - 'Podfile.lock'
-      - '.github/workflows/ios-testflight.yml'
+      - "ios/**"
+      - "Podfile"
+      - "Podfile.lock"
+      - ".github/workflows/ios-testflight.yml"
 
 jobs:
   build-and-upload-ios:
@@ -33,7 +33,7 @@ jobs:
       - name: 🔧 Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20.18.1'
+          node-version: "20.18.1"
 
       - name: 📦 Cache & install JS deps
         uses: actions/cache@v3
@@ -79,7 +79,7 @@ jobs:
       - name: 🔨 Seleccionar Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: '16.2'
+          xcode-version: "15.4"
 
       - name: 📋 Ver versión de Xcode
         run: |
