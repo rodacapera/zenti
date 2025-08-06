@@ -35,6 +35,11 @@ jobs:
         with:
           node-version: "20.18.1"
 
+      - name: 🔗 Symlink node for React Native scripts
+        run: |
+          echo "Creating symlink /usr/local/bin/node → $(which node)"
+          sudo ln -sf "$(which node)" /usr/local/bin/node
+
       - name: 📦 Cache & install JS deps
         uses: actions/cache@v3
         with:
