@@ -1,4 +1,4 @@
-package com.zenti
+package com.teranov.zentiapp
 
 import android.app.Application
 import com.facebook.react.PackageList

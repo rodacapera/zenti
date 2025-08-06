@@ -1,4 +1,4 @@
-package com.zenti
+package com.teranov.zentiapp
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
