@@ -1,65 +1,21 @@
-name: 🍏 iOS CI/CD - TestFlight (Manual & Validaciones)
+name: 📦 iOS TestFlight Deployment
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - develop
-    paths:
-      - "ios/**"
-      - "Podfile"
-      - "Podfile.lock"
-      - ".github/workflows/ios-testflight.yml"
 
 jobs:
-  build-and-upload-ios:
-    runs-on: macos-14
-    timeout-minutes: 45
+  deploy:
+    runs-on: macos-13
 
     steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v3
+      - name: 🧩 Checkout repositorio
+        uses: actions/checkout@v4
 
-      - name: ✅ Validar Scheme Compartido
-        run: |
-          echo "Schemes en workspace:"
-          ls ios/Zenti.xcworkspace/xcshareddata/xcschemes
-          if grep -q 'Zenti' ios/Zenti.xcworkspace/xcshareddata/xcschemes/*.xcscheme; then
-            echo "✅ Encontrado ‘Zenti’ en alguno de los schemes"
-          else
-            echo "❌ No se encontró ‘Zenti’ en los schemes compartidos" && exit 1
-          fi
-
-      - name: 🔧 Setup Node.js
-        uses: actions/setup-node@v3
+      - name: ⬇️ Instalar Ruby y Bundler
+        uses: ruby/setup-ruby@v1
         with:
-          node-version: "20.18.1"
-
-      - name: 🔗 Symlink node for React Native scripts
-        run: |
-          echo "Creating symlink /usr/local/bin/node → $(which node)"
-          sudo ln -sf "$(which node)" /usr/local/bin/node
-
-      - name: 📦 Cache & install JS deps
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/yarn
-            node_modules
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-      - run: yarn install --frozen-lockfile
-
-      - name: 💾 Cache CocoaPods
-        uses: actions/cache@v3
-        with:
-          path: ios/Pods
-          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
-
-      - name: 📦 Instalar Bundler y dependencias Ruby
-        run: |
-          cd ios
-          gem install bundler --silent
-          bundle install --jobs 4 --retry 3 --quiet
+          ruby-version: 3.1
+          bundler-cache: true
 
       - name: 🧨 Limpiar Pods, DerivedData y Caches
         run: |
@@ -67,63 +23,39 @@ jobs:
           rm -rf ~/Library/Developer/Xcode/DerivedData
           rm -rf ~/Library/Caches/CocoaPods
           rm -rf ios/Pods
-          rm -f ios/Podfile.lock
 
-      - name: 📦 Instalar Pods
-        run: |
-          cd ios
-          bundle exec pod install
-
-      - name: 🚀 Bump version & build number
-        run: |
-          cd ios
-          xcrun agvtool new-marketing-version 1.0.1
-          xcrun agvtool new-version -all ${{ github.run_number }}
-          cd ..
-
-      - name: 🔨 Seleccionar Xcode
-        uses: maxim-lobanov/setup-xcode@v1
+      - name: 💾 Cache de dependencias CocoaPods
+        uses: actions/cache@v4
         with:
-          xcode-version: "16.2" # Usa Xcode 16.2 que sí soporta iOS 18.0
+          path: |
+            ios/Pods
+            ios/Podfile.lock
+          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
 
-      - name: 📋 Ver versión de Xcode
+      - name: 📦 Instalar dependencias iOS
         run: |
-          xcode-select -p
-          xcodebuild -version
+          cd ios
+          pod install
+
+      - name: 🔐 Descargar certificados con Match
+        env:
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          APPLE_DEVELOPMENT_TEAM_ID: ${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }}
+          CI: true
+        run: |
+          cd ios
+          bundle exec fastlane match appstore --readonly --type appstore --team-id "$APPLE_DEVELOPMENT_TEAM_ID"
 
       - name: 🚀 Build y subir a TestFlight con Fastlane
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
-          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           APPLE_DEVELOPMENT_TEAM_ID: ${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }}
-          RCT_NO_LAUNCH_PACKAGER: "true" # ← CLAVE para evitar scripts innecesarios
-          CI: "true" # ← CLAVE para entornos CI/CD
         run: |
           cd ios
           bundle exec fastlane beta
-
-      - name: 🔍 Mostrar logs de Fastlane si existen
-        if: failure()
-        run: |
-          if [ -d "/Users/runner/Library/Logs/gym" ]; then
-            echo "=== Contenido de /Users/runner/Library/Logs/gym ==="
-            ls -l /Users/runner/Library/Logs/gym
-            cat /Users/runner/Library/Logs/gym/*.log || true
-          fi
-          if [ -d "ios/fastlane/logs" ]; then
-            echo "=== Contenido de ios/fastlane/logs ==="
-            ls -l ios/fastlane/logs
-            cat ios/fastlane/logs/*.log || true
-          fi
-
-      - name: 💾 Guardar log de Fastlane
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: fastlane-gym-log
-          path: |
-            /Users/runner/Library/Logs/gym
-            ios/fastlane/logs
-          if-no-files-found: warn

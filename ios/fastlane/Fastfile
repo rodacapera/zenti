@@ -1,12 +1,22 @@
 default_platform(:ios)
 
 platform :ios do
-  desc "🚀 Compilar y subir a TestFlight"
+  desc "🏗️ Compilar la app y generar el IPA"
+  lane :build_only do
+    UI.message("🔐 Configurando keychain para certificados…")
 
-  lane :beta do
-    UI.message("🚀 Compilando la app Zenti con Fastlane")
+    keychain_name = "build.keychain"
+    keychain_password = ENV["MATCH_PASSWORD"]
 
-    # 🔐 Descargar certificados y perfiles desde el repositorio privado (modo readonly)
+    setup_keychain(
+      name: keychain_name,
+      password: keychain_password,
+      default_keychain: true,
+      unlock: true,
+      timeout: 3600,
+      lock_when_sleeps: false
+    )
+
     match(
       type: "appstore",
       app_identifier: "com.teranov.zentiapp",
@@ -14,10 +24,11 @@ platform :ios do
       team_id: ENV["APPLE_DEVELOPMENT_TEAM_ID"],
       git_url: "https://github.com/rodacapera/certificates-zenti",
       git_basic_authorization: ENV["MATCH_GIT_BASIC_AUTHORIZATION"],
-      readonly: true
+      readonly: true,
+      keychain_name: keychain_name,
+      keychain_password: keychain_password
     )
 
-    # 🏗️ Construcción de la app
     build_app(
       scheme: "Zenti",
       export_method: "app-store",
@@ -26,7 +37,7 @@ platform :ios do
           "com.teranov.zentiapp" => "match AppStore com.teranov.zentiapp"
         },
         method: "app-store",
-        signingStyle: "manual", # ← ¡CAMBIO CRÍTICO!
+        signingStyle: "manual",
         teamID: ENV["APPLE_DEVELOPMENT_TEAM_ID"],
         compileBitcode: true,
         uploadSymbols: true,
@@ -36,13 +47,21 @@ platform :ios do
       output_directory: "build",
       export_team_id: ENV["APPLE_DEVELOPMENT_TEAM_ID"]
     )
+  end
 
-    # ☁️ Subir a TestFlight
-    UI.message("☁️ Subiendo a TestFlight para #{ENV["APPLE_ID"]}")
+  desc "☁️ Subir IPA generada a TestFlight"
+  lane :upload_only do
     upload_to_testflight(
       username: ENV["APPLE_ID"],
       skip_waiting_for_build_processing: true,
-      app_identifier: "com.teranov.zentiapp"
+      app_identifier: "com.teranov.zentiapp",
+      ipa: "build/Zenti.ipa"
     )
+  end
+
+  desc "🚀 Lane completa: compila y sube"
+  lane :beta do
+    build_only
+    upload_only
   end
 end
