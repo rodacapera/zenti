@@ -1,4 +1,4 @@
-name: 🍏 iOS CI/CD - TestFlight (Manual & Validaciones)
+name: 🍏 iOS CI/CD - TestFlight (Optimizado)
 
 on:
   workflow_dispatch:
@@ -14,7 +14,7 @@ on:
 jobs:
   build-and-upload-ios:
     runs-on: macos-14
-    timeout-minutes: 45
+    timeout-minutes: 120
 
     steps:
       - name: 📥 Checkout code
@@ -36,11 +36,9 @@ jobs:
           node-version: "20.18.1"
 
       - name: 🔗 Symlink node for React Native scripts
-        run: |
-          echo "Creating symlink /usr/local/bin/node → $(which node)"
-          sudo ln -sf "$(which node)" /usr/local/bin/node
+        run: sudo ln -sf "$(which node)" /usr/local/bin/node
 
-      - name: 📦 Cache & install JS deps
+      - name: 📦 Cache JS deps
         uses: actions/cache@v3
         with:
           path: |
@@ -61,18 +59,10 @@ jobs:
           gem install bundler --silent
           bundle install --jobs 4 --retry 3 --quiet
 
-      - name: 🧨 Limpiar Pods, DerivedData y Caches
-        run: |
-          echo "🧹 Limpieza agresiva para evitar errores en CI..."
-          rm -rf ~/Library/Developer/Xcode/DerivedData
-          rm -rf ~/Library/Caches/CocoaPods
-          rm -rf ios/Pods
-          rm -f ios/Podfile.lock
-
-      - name: 📦 Instalar Pods
+      - name: 📦 Instalar Pods (sin limpieza completa)
         run: |
           cd ios
-          bundle exec pod install
+          pod install
 
       - name: 🚀 Bump version & build number
         run: |
@@ -84,7 +74,7 @@ jobs:
       - name: 🔨 Seleccionar Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: "16.2" # Usa Xcode 16.2 que sí soporta iOS 18.0
+          xcode-version: "16.2"
 
       - name: 📋 Ver versión de Xcode
         run: |
@@ -98,8 +88,8 @@ jobs:
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
           APPLE_DEVELOPMENT_TEAM_ID: ${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }}
-          RCT_NO_LAUNCH_PACKAGER: "true" # ← CLAVE para evitar scripts innecesarios
-          CI: "true" # ← CLAVE para entornos CI/CD
+          RCT_NO_LAUNCH_PACKAGER: "true"
+          CI: "true"
         run: |
           cd ios
           bundle exec fastlane beta
@@ -108,12 +98,10 @@ jobs:
         if: failure()
         run: |
           if [ -d "/Users/runner/Library/Logs/gym" ]; then
-            echo "=== Contenido de /Users/runner/Library/Logs/gym ==="
             ls -l /Users/runner/Library/Logs/gym
             cat /Users/runner/Library/Logs/gym/*.log || true
           fi
           if [ -d "ios/fastlane/logs" ]; then
-            echo "=== Contenido de ios/fastlane/logs ==="
             ls -l ios/fastlane/logs
             cat ios/fastlane/logs/*.log || true
           fi

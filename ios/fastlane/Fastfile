@@ -6,7 +6,7 @@ platform :ios do
   lane :beta do
     UI.message("🚀 Compilando la app Zenti con Fastlane")
 
-    # 🔐 Descargar certificados y perfiles desde el repositorio privado (modo readonly)
+    # 🔐 Descargar certificados y perfiles
     match(
       type: "appstore",
       app_identifier: "com.teranov.zentiapp",
@@ -26,13 +26,12 @@ platform :ios do
           "com.teranov.zentiapp" => "match AppStore com.teranov.zentiapp"
         },
         method: "app-store",
-        signingStyle: "manual", # ← ¡CAMBIO CRÍTICO!
+        signingStyle: "manual",
         teamID: ENV["APPLE_DEVELOPMENT_TEAM_ID"],
-        compileBitcode: true,
+        compileBitcode: false, # 🚀 Desactivado para acelerar
         uploadSymbols: true,
         stripSwiftSymbols: true
       },
-      clean: true,
       output_directory: "build",
       export_team_id: ENV["APPLE_DEVELOPMENT_TEAM_ID"]
     )
@@ -41,6 +40,7 @@ platform :ios do
     UI.message("☁️ Subiendo a TestFlight para #{ENV["APPLE_ID"]}")
     upload_to_testflight(
       username: ENV["APPLE_ID"],
+      skip_submission: true,
       skip_waiting_for_build_processing: true,
       app_identifier: "com.teranov.zentiapp"
     )
