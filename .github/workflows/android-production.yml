@@ -12,18 +12,19 @@ jobs:
 
     steps:
       - name: 📦 Checkout del repositorio
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: 🔧 Configurar Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '20.18.1'
 
       - name: ♻️ Cache de dependencias Yarn
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cache/yarn
+            node_modules
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
             ${{ runner.os }}-yarn-
@@ -32,7 +33,7 @@ jobs:
         run: yarn install --frozen-lockfile
 
       - name: ☕ Configurar Java 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -78,14 +79,18 @@ jobs:
 
       - name: ✅ Validar JSON
         run: |
-          if ! jq empty android/service-account.json; then
-            echo "❌ JSON inválido o truncado"; exit 1;
+          if jq empty android/service-account.json 2>/dev/null; then
+            echo "✅ JSON válido"
+          else
+            echo "❌ JSON inválido o truncado"
+            exit 1
           fi
 
       - name: 🚀 Subir a Google Play Console - PRODUCTION
-        uses: r0adkll/upload-google-play@v1
+        uses: r0adkll/upload-google-play@v1.1.2
         with:
           serviceAccountJson: android/service-account.json
           packageName: com.teranov.zentiapp
           releaseFiles: ${{ github.workspace }}/android/app/build/outputs/bundle/release/app-release.aab
           track: production
+          status: completed

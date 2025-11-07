@@ -6,10 +6,13 @@ on:
     branches:
       - develop
     paths:
-      - "ios/**"
-      - "Podfile"
-      - "Podfile.lock"
-      - ".github/workflows/ios-testflight.yml"
+      - 'ios/**'
+      - 'src/**'
+      - 'Podfile'
+      - 'Podfile.lock'
+      - 'package.json'
+      - 'yarn.lock'
+      - '.github/workflows/ios-testFlight.yml'
 
 jobs:
   build-and-upload-ios:
@@ -18,11 +21,21 @@ jobs:
 
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: 🔨 Seleccionar Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "16.2"
+
+      - name: 📋 Ver versión de Xcode
+        run: |
+          xcode-select -p
+          xcodebuild -version
 
       - name: ✅ Validar Scheme Compartido
         run: |
-          echo "Schemes en workspace:"
+          echo "📂 Schemes disponibles:"
           ls ios/Zenti.xcworkspace/xcshareddata/xcschemes
           if grep -q 'Zenti' ios/Zenti.xcworkspace/xcshareddata/xcschemes/*.xcscheme; then
             echo "✅ Encontrado ‘Zenti’ en alguno de los schemes"
@@ -30,8 +43,9 @@ jobs:
             echo "❌ No se encontró ‘Zenti’ en los schemes compartidos" && exit 1
           fi
 
+      # 3️⃣ Dependencias y versionado
       - name: 🔧 Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: "20.18.1"
 
@@ -39,16 +53,18 @@ jobs:
         run: sudo ln -sf "$(which node)" /usr/local/bin/node
 
       - name: 📦 Cache JS deps
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cache/yarn
             node_modules
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-      - run: yarn install --frozen-lockfile
+
+      - name: 📦 Install JS deps
+        run: yarn install --frozen-lockfile
 
       - name: 💾 Cache CocoaPods
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ios/Pods
           key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
@@ -70,16 +86,6 @@ jobs:
           xcrun agvtool new-marketing-version 1.0.1
           xcrun agvtool new-version -all ${{ github.run_number }}
           cd ..
-
-      - name: 🔨 Seleccionar Xcode
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: "16.2"
-
-      - name: 📋 Ver versión de Xcode
-        run: |
-          xcode-select -p
-          xcodebuild -version
 
       - name: 🚀 Build y subir a TestFlight con Fastlane
         env:
