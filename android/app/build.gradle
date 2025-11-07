@@ -86,21 +86,33 @@ android {
         versionName "1.0"
     }
     signingConfigs {
-        debug {
-            storeFile file('debug.keystore')
-            storePassword 'android'
-            keyAlias 'androiddebugkey'
-            keyPassword 'android'
+        release {
+            // Configuración de firma para release usando propiedades del proyecto
+            // Estas propiedades se pasan desde el workflow de CI/CD
+            def keystorePath = project.findProperty('RELEASE_KEYSTORE_PATH')
+            if (keystorePath != null) {
+                storeFile file(keystorePath)
+                storePassword project.findProperty('RELEASE_KEYSTORE_PASSWORD')
+                keyAlias project.findProperty('RELEASE_KEY_ALIAS')
+                keyPassword project.findProperty('RELEASE_KEY_PASSWORD')
+            }
         }
     }
     buildTypes {
         debug {
-            signingConfig signingConfigs.debug
+            // No especificar signingConfig explícitamente
+            // Gradle usará el keystore de debug por defecto si existe,
+            // o lo generará automáticamente si no existe
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            // Usar la configuración de firma de release solo si está disponible
+            def keystorePath = project.findProperty('RELEASE_KEYSTORE_PATH')
+            if (keystorePath != null && signingConfigs.release.storeFile != null) {
+                signingConfig signingConfigs.release
+            } else {
+                // Si no hay configuración de release, fallar explícitamente
+                throw new GradleException('RELEASE_KEYSTORE_PATH property is required for release builds. Make sure to pass -PRELEASE_KEYSTORE_PATH, -PRELEASE_KEYSTORE_PASSWORD, -PRELEASE_KEY_ALIAS, and -PRELEASE_KEY_PASSWORD')
+            }
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
