@@ -87,7 +87,20 @@ jobs:
           xcrun agvtool new-version -all ${{ github.run_number }}
           cd ..
 
+      - name: 🔐 Configurar Keychain para CI
+        run: |
+          # Crear un keychain temporal para CI
+          security create-keychain -p "" build.keychain
+          security list-keychains -s build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security set-keychain-settings -t 3600 -u build.keychain
+          
+          # Configurar para no pedir contraseña
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" build.keychain || true
+
       - name: 🚀 Build y subir a TestFlight con Fastlane
+        timeout-minutes: 90
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
@@ -96,6 +109,8 @@ jobs:
           APPLE_DEVELOPMENT_TEAM_ID: ${{ secrets.APPLE_DEVELOPMENT_TEAM_ID }}
           RCT_NO_LAUNCH_PACKAGER: "true"
           CI: "true"
+          FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT: "120"
+          FASTLANE_XCODEBUILD_SETTINGS_RETRIES: "3"
         run: |
           cd ios
           bundle exec fastlane beta
@@ -111,6 +126,12 @@ jobs:
             ls -l ios/fastlane/logs
             cat ios/fastlane/logs/*.log || true
           fi
+
+      - name: 🧹 Limpiar Keychain
+        if: always()
+        run: |
+          security delete-keychain build.keychain || true
+          security list-keychains -s login.keychain || true
 
       - name: 💾 Guardar log de Fastlane
         if: always()

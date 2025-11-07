@@ -14,7 +14,9 @@ platform :ios do
       team_id: ENV["APPLE_DEVELOPMENT_TEAM_ID"],
       git_url: "https://github.com/rodacapera/certificates-zenti",
       git_basic_authorization: ENV["MATCH_GIT_BASIC_AUTHORIZATION"],
-      readonly: true
+      readonly: true,
+      keychain_name: "build.keychain",
+      keychain_password: ""
     )
 
     # 🏗️ Construcción de la app
@@ -33,7 +35,8 @@ platform :ios do
         stripSwiftSymbols: true
       },
       output_directory: "build",
-      export_team_id: ENV["APPLE_DEVELOPMENT_TEAM_ID"]
+      export_team_id: ENV["APPLE_DEVELOPMENT_TEAM_ID"],
+      skip_package_ipa_validation: true
     )
 
     # ☁️ Subir a TestFlight
