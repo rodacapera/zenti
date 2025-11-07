@@ -69,7 +69,7 @@ jobs:
         run: |
           cd android
           ./gradlew bundleRelease \
-            -PRELEASE_KEYSTORE_PATH=app/release.keystore \
+            -PRELEASE_KEYSTORE_PATH=release.keystore \
             -PRELEASE_KEYSTORE_PASSWORD=${{ secrets.RELEASE_KEYSTORE_PASSWORD }} \
             -PRELEASE_KEY_ALIAS=${{ secrets.RELEASE_KEY_ALIAS }} \
             -PRELEASE_KEY_PASSWORD=${{ secrets.RELEASE_KEY_PASSWORD }}

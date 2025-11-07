@@ -89,6 +89,7 @@ android {
         release {
             // Configuración de firma para release usando propiedades del proyecto
             // Estas propiedades se pasan desde el workflow de CI/CD
+            // La ruta debe ser relativa desde el directorio del módulo app (android/app/)
             def keystorePath = project.findProperty('RELEASE_KEYSTORE_PATH')
             if (keystorePath != null) {
                 storeFile file(keystorePath)
