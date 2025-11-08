@@ -66,8 +66,7 @@ platform :ios do
         build_path: "./build",
         silent: false,
         suppress_xcode_output: false,
-        buildlog_path: "./build/logs",
-        output_style: "raw" # Mostrar output completo
+        buildlog_path: "./build/logs"
       )
     rescue => ex
       UI.error("❌ Error al construir la app: #{ex.message}")
