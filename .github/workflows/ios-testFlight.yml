@@ -133,12 +133,41 @@ jobs:
         run: |
           cd ios
           # Ejecutar fastlane con salida completa y guardar en archivo
+          set +e  # No salir inmediatamente en error
           bundle exec fastlane beta 2>&1 | tee fastlane_output.log
-          # Si falla, mostrar las últimas líneas del log
-          if [ ${PIPESTATUS[0]} -ne 0 ]; then
-            echo "❌ Fastlane falló. Últimas 100 líneas del log:"
-            tail -100 fastlane_output.log || true
-            exit 1
+          FASTLANE_EXIT_CODE=${PIPESTATUS[0]}
+          
+          if [ $FASTLANE_EXIT_CODE -ne 0 ]; then
+            echo "❌ Fastlane falló con código $FASTLANE_EXIT_CODE"
+            echo ""
+            echo "=== Buscando errores en fastlane_output.log ==="
+            grep -i -A 10 -B 5 "error:\|failed\|FAILED\|Error building" fastlane_output.log | tail -100 || true
+            echo ""
+            echo "=== Últimas 200 líneas de fastlane_output.log ==="
+            tail -200 fastlane_output.log || true
+            echo ""
+            echo "=== Buscando logs de xcodebuild ==="
+            # Buscar en el directorio de gym (donde fastlane guarda los logs)
+            if [ -d "/Users/runner/Library/Logs/gym" ]; then
+              echo "=== Buscando en /Users/runner/Library/Logs/gym ==="
+              find /Users/runner/Library/Logs/gym -name "*.log" -type f | while read logfile; do
+                echo "=== Errores en $logfile ==="
+                grep -i -A 20 -B 5 "error:\|failed\|FAILED\|CompileC.*failed\|The following build commands failed" "$logfile" | tail -200 || true
+                echo ""
+                echo "=== Últimas 200 líneas de $logfile ==="
+                tail -200 "$logfile" || true
+                echo ""
+              done
+            fi
+            # También buscar en build/logs si existe
+            if [ -f "build/logs/Zenti-Zenti.log" ]; then
+              echo "=== Errores en build/logs/Zenti-Zenti.log ==="
+              grep -i -A 20 -B 5 "error:\|failed\|FAILED\|CompileC.*failed" build/logs/Zenti-Zenti.log | tail -200 || true
+              echo ""
+              echo "=== Últimas 200 líneas de build/logs/Zenti-Zenti.log ==="
+              tail -200 build/logs/Zenti-Zenti.log || true
+            fi
+            exit $FASTLANE_EXIT_CODE
           fi
 
       - name: 🔍 Mostrar logs de error completos

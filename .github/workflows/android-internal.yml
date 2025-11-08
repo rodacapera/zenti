@@ -50,12 +50,23 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # 6. Limpiar build anterior
-      - name: 🧹 Limpiar build anterior
+      # 6. Limpiar build anterior y daemons
+      - name: 🧹 Limpiar build anterior y daemons
         run: |
           cd android
+          # Detener todos los daemons de Gradle/Kotlin
+          ./gradlew --stop || true
+          # Limpiar build
           ./gradlew clean || true
-          rm -rf app/build app/.cxx || true
+          # Limpiar directorios de build
+          rm -rf app/build app/.cxx .gradle build || true
+          # Limpiar cache de Kotlin
+          rm -rf .kotlin || true
+          # Limpiar cache de Gradle (solo en CI para evitar problemas)
+          if [ "$CI" = "true" ]; then
+            rm -rf ~/.gradle/caches/ || true
+            rm -rf ~/.gradle/daemon/ || true
+          fi
 
       # 7. Bump versionCode y versionName
       - name: 🔢 Bump versionCode y versionName
@@ -88,12 +99,44 @@ jobs:
       - name: 🔐 Compilar .aab firmado (release)
         run: |
           cd android
-          ./gradlew bundleRelease \
-            -PRELEASE_KEYSTORE_PATH=release.keystore \
-            -PRELEASE_KEYSTORE_PASSWORD=${{ secrets.RELEASE_KEYSTORE_PASSWORD }} \
-            -PRELEASE_KEY_ALIAS=${{ secrets.RELEASE_KEY_ALIAS }} \
-            -PRELEASE_KEY_PASSWORD=${{ secrets.RELEASE_KEY_PASSWORD }} \
-            --stacktrace 2>&1 | tee gradle_build.log || (echo "❌ Build falló. Buscando errores:" && grep -i "error\|failed\|exception" gradle_build.log | tail -50 && exit 1)
+          # Configurar variables de entorno para Gradle
+          export GRADLE_OPTS="-Xmx2048m -Dorg.gradle.daemon=false -Dorg.gradle.parallel=false"
+          export JAVA_OPTS="-Xmx2048m"
+          
+          # Intentar build con reintentos
+          MAX_RETRIES=3
+          RETRY_COUNT=0
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            echo "🔄 Intento de build #$((RETRY_COUNT + 1)) de $MAX_RETRIES"
+            
+            if ./gradlew bundleRelease \
+              -PRELEASE_KEYSTORE_PATH=release.keystore \
+              -PRELEASE_KEYSTORE_PASSWORD=${{ secrets.RELEASE_KEYSTORE_PASSWORD }} \
+              -PRELEASE_KEY_ALIAS=${{ secrets.RELEASE_KEY_ALIAS }} \
+              -PRELEASE_KEY_PASSWORD=${{ secrets.RELEASE_KEY_PASSWORD }} \
+              --stacktrace \
+              --no-daemon \
+              --no-parallel \
+              -Dorg.gradle.jvmargs="-Xmx2048m -XX:MaxMetaspaceSize=512m" \
+              2>&1 | tee gradle_build.log; then
+              echo "✅ Build exitoso"
+              exit 0
+            else
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+              if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                echo "⚠️ Build falló, deteniendo daemons y limpiando..."
+                ./gradlew --stop || true
+                rm -rf .gradle app/build || true
+                sleep 5
+              else
+                echo "❌ Build falló después de $MAX_RETRIES intentos"
+                echo "📋 Buscando errores en el log:"
+                grep -i "error\|failed\|exception\|FAILURE" gradle_build.log | tail -50 || true
+                exit 1
+              fi
+            fi
+          done
 
       # 11. Verificar que el .aab se generó
       - name: 🔍 Verificar .aab generado
