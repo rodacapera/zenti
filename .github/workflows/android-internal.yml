@@ -50,7 +50,14 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # 6. Bump versionCode y versionName
+      # 6. Limpiar build anterior
+      - name: 🧹 Limpiar build anterior
+        run: |
+          cd android
+          ./gradlew clean || true
+          rm -rf app/build app/.cxx || true
+
+      # 7. Bump versionCode y versionName
       - name: 🔢 Bump versionCode y versionName
         uses: chkfung/android-version-actions@v1.2.2
         with:
@@ -58,13 +65,26 @@ jobs:
           versionCode: ${{ github.run_number }}
           versionName: 1.0.${{ github.run_number }}
 
-      # 7. Decodificar release.keystore
+      # 8. Verificar configuración antes del build
+      - name: 🔍 Verificar configuración
+        run: |
+          echo "🔍 Verificando configuración..."
+          echo "📦 Node version:"
+          node --version
+          echo "☕ Java version:"
+          java -version
+          echo "📋 Gradle version:"
+          cd android && ./gradlew --version
+          echo "📦 Verificando dependencias instaladas:"
+          ls -la node_modules | head -10 || true
+
+      # 9. Decodificar release.keystore
       - name: 🔓 Decodificar archivo release.keystore
         run: |
           mkdir -p android/app
           echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
 
-      # 8. Compilar el App Bundle (.aab) firmado
+      # 10. Compilar el App Bundle (.aab) firmado
       - name: 🔐 Compilar .aab firmado (release)
         run: |
           cd android
@@ -72,19 +92,34 @@ jobs:
             -PRELEASE_KEYSTORE_PATH=release.keystore \
             -PRELEASE_KEYSTORE_PASSWORD=${{ secrets.RELEASE_KEYSTORE_PASSWORD }} \
             -PRELEASE_KEY_ALIAS=${{ secrets.RELEASE_KEY_ALIAS }} \
-            -PRELEASE_KEY_PASSWORD=${{ secrets.RELEASE_KEY_PASSWORD }}
+            -PRELEASE_KEY_PASSWORD=${{ secrets.RELEASE_KEY_PASSWORD }} \
+            --stacktrace 2>&1 | tee gradle_build.log || (echo "❌ Build falló. Buscando errores:" && grep -i "error\|failed\|exception" gradle_build.log | tail -50 && exit 1)
 
-      # 9. Verificar que el .aab se generó
+      # 11. Verificar que el .aab se generó
       - name: 🔍 Verificar .aab generado
         run: ls -lh android/app/build/outputs/bundle/release/app-release.aab
 
-      # 10. Decodificar service-account.json
+      # 11.1. Mostrar logs de error si el build falló
+      - name: 📋 Mostrar logs de error (si falló)
+        if: failure()
+        run: |
+          echo "📋 Buscando errores en el log de Gradle..."
+          if [ -f "android/gradle_build.log" ]; then
+            echo "=== Últimas 200 líneas del log ==="
+            tail -200 android/gradle_build.log || true
+            echo "=== Errores encontrados ==="
+            grep -i "error\|failed\|exception\|FAILURE" android/gradle_build.log | tail -50 || true
+          fi
+          echo "=== Verificando archivos de build ==="
+          ls -la android/app/build/outputs/bundle/release/ 2>/dev/null || echo "❌ No se encontró el directorio de outputs"
+
+      # 12. Decodificar service-account.json
       - name: 📄 Decodificar service-account.json
         run: |
           mkdir -p android
           echo "${{ secrets.SERVICE_ACCOUNT_JSON_BASE64 }}" | base64 --decode > android/service-account.json
 
-      # 11. Validar que el JSON sea válido
+      # 13. Validar que el JSON sea válido
       - name: ✅ Validar JSON
         run: |
           if jq empty android/service-account.json 2>/dev/null; then
@@ -94,7 +129,7 @@ jobs:
             exit 1
           fi
 
-      # 12. Subir a Google Play Console - INTERNAL
+      # 14. Subir a Google Play Console - INTERNAL
       - name: 🚀 Subir a Google Play Console - INTERNAL
         uses: r0adkll/upload-google-play@v1.1.2
         with:

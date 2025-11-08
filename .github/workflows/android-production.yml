@@ -38,12 +38,30 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: 🧹 Limpiar build anterior
+        run: |
+          cd android
+          ./gradlew clean || true
+          rm -rf app/build app/.cxx || true
+
       - name: 🔢 Bump versionCode y versionName
         uses: chkfung/android-version-actions@v1.2.2
         with:
           gradlePath: android/app/build.gradle
           versionCode: ${{ github.run_number }}
           versionName: 1.0.${{ github.run_number }}
+
+      - name: 🔍 Verificar configuración
+        run: |
+          echo "🔍 Verificando configuración..."
+          echo "📦 Node version:"
+          node --version
+          echo "☕ Java version:"
+          java -version
+          echo "📋 Gradle version:"
+          cd android && ./gradlew --version
+          echo "📦 Verificando dependencias instaladas:"
+          ls -la node_modules | head -10 || true
 
       - name: 🔓 Decodificar archivo release.keystore
         run: |
@@ -57,10 +75,24 @@ jobs:
             -PRELEASE_KEYSTORE_PATH=release.keystore \
             -PRELEASE_KEYSTORE_PASSWORD=${{ secrets.RELEASE_KEYSTORE_PASSWORD }} \
             -PRELEASE_KEY_ALIAS=${{ secrets.RELEASE_KEY_ALIAS }} \
-            -PRELEASE_KEY_PASSWORD=${{ secrets.RELEASE_KEY_PASSWORD }}
+            -PRELEASE_KEY_PASSWORD=${{ secrets.RELEASE_KEY_PASSWORD }} \
+            --stacktrace 2>&1 | tee gradle_build.log || (echo "❌ Build falló. Buscando errores:" && grep -i "error\|failed\|exception" gradle_build.log | tail -50 && exit 1)
 
       - name: 🔍 Verificar .aab generado
         run: ls -lh android/app/build/outputs/bundle/release/app-release.aab
+
+      - name: 📋 Mostrar logs de error (si falló)
+        if: failure()
+        run: |
+          echo "📋 Buscando errores en el log de Gradle..."
+          if [ -f "android/gradle_build.log" ]; then
+            echo "=== Últimas 200 líneas del log ==="
+            tail -200 android/gradle_build.log || true
+            echo "=== Errores encontrados ==="
+            grep -i "error\|failed\|exception\|FAILURE" android/gradle_build.log | tail -50 || true
+          fi
+          echo "=== Verificando archivos de build ==="
+          ls -la android/app/build/outputs/bundle/release/ 2>/dev/null || echo "❌ No se encontró el directorio de outputs"
 
       - name: 📄 Decodificar service-account.json
         run: |
