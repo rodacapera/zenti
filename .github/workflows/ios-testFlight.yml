@@ -147,25 +147,43 @@ jobs:
             tail -200 fastlane_output.log || true
             echo ""
             echo "=== Buscando logs de xcodebuild ==="
-            # Buscar en el directorio de gym (donde fastlane guarda los logs)
+            # Leer el log directamente desde build/logs
+            LOG_FILE="ios/build/logs/Zenti-Zenti.log"
+            if [ -f "$LOG_FILE" ]; then
+              echo "✅ Encontrado log en: $LOG_FILE"
+              echo "📏 Tamaño del archivo:"
+              ls -lh "$LOG_FILE" || true
+              echo ""
+              echo "=== BUSCANDO ERRORES EN EL LOG ==="
+              echo "Buscando líneas con 'error:', 'failed', 'FAILED', 'CompileC'..."
+              grep -i -E "error:|failed|FAILED|CompileC.*failed|The following build commands failed" "$LOG_FILE" | tail -50 || true
+              echo ""
+              echo "=== ÚLTIMAS 300 LÍNEAS DEL LOG (donde suelen estar los errores) ==="
+              tail -300 "$LOG_FILE" || true
+              echo ""
+              echo "=== BUSCANDO ERRORES ESPECÍFICOS DE COMPILACIÓN ==="
+              grep -i -A 30 -B 5 "error:\|failed\|FAILED\|CompileC.*failed\|The following build commands failed\|Command.*failed" "$LOG_FILE" | tail -300 || true
+            else
+              echo "⚠️ No se encontró $LOG_FILE"
+              echo "Buscando en otros lugares..."
+              find ios/build/logs -name "*.log" -type f 2>/dev/null | head -5 | while read f; do
+                echo "=== Archivo encontrado: $f ==="
+                ls -lh "$f" || true
+                echo "=== Últimas 200 líneas de $f ==="
+                tail -200 "$f" || true
+                echo ""
+              done
+            fi
+            # Buscar en el directorio de gym también
             if [ -d "/Users/runner/Library/Logs/gym" ]; then
               echo "=== Buscando en /Users/runner/Library/Logs/gym ==="
-              find /Users/runner/Library/Logs/gym -name "*.log" -type f | while read logfile; do
+              find /Users/runner/Library/Logs/gym -name "*.log" -type f 2>/dev/null | head -3 | while read logfile; do
                 echo "=== Errores en $logfile ==="
-                grep -i -A 20 -B 5 "error:\|failed\|FAILED\|CompileC.*failed\|The following build commands failed" "$logfile" | tail -200 || true
-                echo ""
+                grep -i -E "error:|failed|FAILED|CompileC.*failed|The following build commands failed" "$logfile" | tail -50 || true
                 echo "=== Últimas 200 líneas de $logfile ==="
                 tail -200 "$logfile" || true
                 echo ""
               done
-            fi
-            # También buscar en build/logs si existe
-            if [ -f "build/logs/Zenti-Zenti.log" ]; then
-              echo "=== Errores en build/logs/Zenti-Zenti.log ==="
-              grep -i -A 20 -B 5 "error:\|failed\|FAILED\|CompileC.*failed" build/logs/Zenti-Zenti.log | tail -200 || true
-              echo ""
-              echo "=== Últimas 200 líneas de build/logs/Zenti-Zenti.log ==="
-              tail -200 build/logs/Zenti-Zenti.log || true
             fi
             exit $FASTLANE_EXIT_CODE
           fi
@@ -173,37 +191,50 @@ jobs:
       - name: 🔍 Mostrar logs de error completos
         if: failure()
         run: |
-          echo "📋 Mostrando logs de error..."
-          if [ -f "ios/fastlane_output.log" ]; then
-            echo "📄 Últimas 500 líneas de fastlane_output.log:"
-            tail -500 ios/fastlane_output.log || true
-          fi
-          if [ -d "/Users/runner/Library/Logs/gym" ]; then
-            echo "📦 Logs de gym:"
-            ls -lR /Users/runner/Library/Logs/gym || true
-            echo "📄 Buscando errores en los logs de gym:"
-            find /Users/runner/Library/Logs/gym -name "*.log" -type f | while read logfile; do
-              echo "=== $logfile ==="
-              # Mostrar líneas con "error:", "Error:", "failed", "Failed"
-              grep -i -A 5 -B 5 "error:\|Error:\|failed\|Failed" "$logfile" | tail -100 || true
-            done
-            # Mostrar las últimas líneas de cada log
-            find /Users/runner/Library/Logs/gym -name "*.log" -type f -exec sh -c 'echo "=== {} ==="; tail -200 {}' \; || true
-          fi
+          echo "📋 Mostrando logs de error completos..."
+          echo ""
+          
+          # Buscar y leer el log de xcodebuild
+          echo "=== BUSCANDO LOG DE XCODEBUILD ==="
           if [ -d "ios/build/logs" ]; then
-            echo "📦 Logs de build:"
-            ls -lR ios/build/logs || true
-            find ios/build/logs -name "*.log" -type f -exec sh -c 'echo "=== {} ==="; tail -200 {}' \; || true
+            echo "📂 Contenido de ios/build/logs:"
+            ls -lh ios/build/logs/ || true
+            echo ""
+            
+            # Buscar todos los archivos .log
+            for log_file in ios/build/logs/*.log; do
+              if [ -f "$log_file" ]; then
+                echo "📄 === ANALIZANDO: $log_file ==="
+                echo "Tamaño: $(ls -lh "$log_file" | awk '{print $5}')"
+                echo ""
+                echo "--- ERRORES ENCONTRADOS ---"
+                grep -i -E "error:|failed|FAILED|CompileC.*failed|The following build commands failed|Command.*failed" "$log_file" | tail -100 || true
+                echo ""
+                echo "--- ÚLTIMAS 400 LÍNEAS (donde suelen estar los errores finales) ---"
+                tail -400 "$log_file" || true
+                echo ""
+                echo "=========================================="
+                echo ""
+              fi
+            done
           fi
-          if [ -d "ios/fastlane/logs" ]; then
-            echo "📦 Logs de fastlane:"
-            ls -l ios/fastlane/logs || true
-            find ios/fastlane/logs -name "*.log" -type f -exec tail -200 {} \; || true
+          
+          # También buscar en fastlane_output.log
+          if [ -f "ios/fastlane_output.log" ]; then
+            echo "=== FASTLANE OUTPUT LOG ==="
+            echo "Últimas 300 líneas:"
+            tail -300 ios/fastlane_output.log || true
+            echo ""
           fi
-          # Mostrar información del build si existe
-          if [ -d "ios/build" ]; then
-            echo "📦 Contenido del directorio build:"
-            ls -la ios/build || true
+          
+          # Buscar en gym logs
+          if [ -d "/Users/runner/Library/Logs/gym" ]; then
+            echo "=== GYM LOGS ==="
+            find /Users/runner/Library/Logs/gym -name "*.log" -type f 2>/dev/null | head -3 | while read logfile; do
+              echo "📄 $logfile"
+              tail -300 "$logfile" || true
+              echo ""
+            done
           fi
 
       - name: 🧹 Limpiar Keychain
@@ -215,30 +246,40 @@ jobs:
       - name: 💾 Guardar logs y artifacts
         if: always()
         run: |
-          echo "💾 Guardando logs..."
+          echo "💾 Guardando logs y artifacts..."
           mkdir -p artifacts
           
           # Copiar logs de fastlane
           if [ -f "ios/fastlane_output.log" ]; then
+            echo "📋 Copiando fastlane_output.log..."
             cp ios/fastlane_output.log artifacts/ || true
+          fi
+          
+          # Copiar logs de build (el más importante)
+          if [ -d "ios/build/logs" ]; then
+            echo "📋 Copiando logs de build..."
+            cp -r ios/build/logs artifacts/build_logs || true
+            # También copiar el log completo si existe
+            find ios/build/logs -name "*.log" -type f -exec cp {} artifacts/ \; || true
           fi
           
           # Copiar logs de gym
           if [ -d "/Users/runner/Library/Logs/gym" ]; then
+            echo "📋 Copiando logs de gym..."
             cp -r /Users/runner/Library/Logs/gym artifacts/gym_logs || true
           fi
           
           # Copiar logs de fastlane
           if [ -d "ios/fastlane/logs" ]; then
+            echo "📋 Copiando logs de fastlane..."
             cp -r ios/fastlane/logs artifacts/fastlane_logs || true
           fi
           
-          # Copiar logs de build
-          if [ -d "ios/build/logs" ]; then
-            cp -r ios/build/logs artifacts/build_logs || true
-          fi
-          
-          # Mostrar tamaño de los logs
+          # Mostrar qué se guardó
+          echo "📦 Contenido de artifacts:"
+          ls -lhR artifacts/ || true
+          echo ""
+          echo "📏 Tamaño de artifacts:"
           du -sh artifacts/* 2>/dev/null || true
 
       - name: 📤 Subir artifacts
