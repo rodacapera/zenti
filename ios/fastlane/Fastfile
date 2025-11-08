@@ -21,6 +21,7 @@ platform :ios do
 
     # 🏗️ Construcción de la app
     build_app(
+      workspace: "Zenti.xcworkspace",
       scheme: "Zenti",
       export_method: "app-store",
       export_options: {
@@ -35,8 +36,7 @@ platform :ios do
         stripSwiftSymbols: true
       },
       output_directory: "build",
-      export_team_id: ENV["APPLE_DEVELOPMENT_TEAM_ID"],
-      skip_package_ipa_validation: true
+      export_team_id: ENV["APPLE_DEVELOPMENT_TEAM_ID"]
     )
 
     # ☁️ Subir a TestFlight

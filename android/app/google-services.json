@@ -12,7 +12,28 @@
           "package_name": "com.teranov.zentiapp"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "487270453896-0kpdahqgiu6lkrai233a3p3q2liuaath.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.teranov.zentiapp",
+            "certificate_hash": "fdf85f6f59d64637d421a611912327dd731a1099"
+          }
+        },
+        {
+          "client_id": "487270453896-8n34a226rivgk6tj3f4rldfm54cc7end.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.teranov.zentiapp",
+            "certificate_hash": "7190fad9f911164e7ad89fd4d298004aeaedb91f"
+          }
+        },
+        {
+          "client_id": "487270453896-i73t4tgcjm5dmog8hs689p0fv4bqfqu1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCWIQ_uv8NmVUsJUzKNXnd1wSlP8mTVt0Q"
@@ -20,7 +41,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "487270453896-i73t4tgcjm5dmog8hs689p0fv4bqfqu1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "487270453896-5dfr72a3d5uu5kgi23dhirnv4bk9oeqh.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.teranov.zentiapp"
+              }
+            }
+          ]
         }
       }
     }

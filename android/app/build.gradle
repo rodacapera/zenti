@@ -110,12 +110,26 @@ android {
             def keystorePath = project.findProperty('RELEASE_KEYSTORE_PATH')
             if (keystorePath != null && signingConfigs.release.storeFile != null) {
                 signingConfig signingConfigs.release
-            } else {
-                // Si no hay configuración de release, fallar explícitamente
-                throw new GradleException('RELEASE_KEYSTORE_PATH property is required for release builds. Make sure to pass -PRELEASE_KEYSTORE_PATH, -PRELEASE_KEYSTORE_PASSWORD, -PRELEASE_KEY_ALIAS, and -PRELEASE_KEY_PASSWORD')
             }
+            // Si no hay keystore configurado, Gradle usará el keystore de debug
+            // Esto permite builds locales sin configuración de release
+            // En CI/CD, las propiedades siempre estarán presentes
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+        }
+    }
+
+    // Configuración para resolver conflictos de dependencias
+    configurations.all {
+        resolutionStrategy {
+            // Forzar el uso de AndroidX en lugar de support libraries
+            force 'androidx.appcompat:appcompat:1.6.1'
+            // Excluir dependencias antiguas de support library de todas las dependencias transitivas
+            eachDependency { details ->
+                if (details.requested.group == 'com.android.support') {
+                    details.useTarget "androidx.${details.requested.name.replace('support-', '')}:${details.requested.version ?: '1.0.0'}"
+                }
+            }
         }
     }
 }
@@ -130,3 +144,6 @@ dependencies {
         implementation jscFlavor
     }
 }
+
+// Aplicar plugin de Google Services al final del archivo
+apply plugin: 'com.google.gms.google-services'

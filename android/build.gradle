@@ -15,7 +15,26 @@ buildscript {
         classpath("com.android.tools.build:gradle")
         classpath("com.facebook.react:react-native-gradle-plugin")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
+        classpath("com.google.gms:google-services:4.4.0")
     }
 }
 
 apply plugin: "com.facebook.react.rootproject"
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://www.jitpack.io' }
+    }
+    
+    // Configuración global para resolver conflictos de dependencias
+    configurations.all {
+        resolutionStrategy {
+            // Forzar el uso de AndroidX en lugar de support libraries
+            force 'androidx.appcompat:appcompat:1.6.1'
+            // Excluir dependencias antiguas de support library
+            exclude group: 'com.android.support', module: 'appcompat-v7'
+        }
+    }
+}
