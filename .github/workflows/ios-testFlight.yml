@@ -63,11 +63,12 @@ jobs:
       - name: 📦 Install JS deps
         run: yarn install --frozen-lockfile
 
-      - name: 💾 Cache CocoaPods
-        uses: actions/cache@v4
-        with:
-          path: ios/Pods
-          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
+      # Desactivar cache temporalmente para forzar instalación limpia
+      # - name: 💾 Cache CocoaPods
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: ios/Pods
+      #     key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
 
       - name: 📦 Instalar Bundler y dependencias Ruby
         run: |
@@ -75,10 +76,13 @@ jobs:
           gem install bundler --silent
           bundle install --jobs 4 --retry 3 --quiet
 
-      - name: 📦 Instalar Pods (sin limpieza completa)
+      - name: 📦 Limpiar e instalar Pods
         run: |
           cd ios
-          pod install
+          # Limpiar Pods para forzar reinstalación con nueva configuración
+          rm -rf Pods Podfile.lock
+          # Instalar Pods con la nueva configuración de deployment target
+          pod install --repo-update
 
       - name: 🚀 Bump version & build number
         run: |
@@ -99,6 +103,20 @@ jobs:
           # Configurar para no pedir contraseña
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" build.keychain || true
 
+      - name: 🔍 Verificar configuración antes del build
+        run: |
+          echo "🔍 Verificando configuración..."
+          cd ios
+          echo "📦 Verificando Pods instalados:"
+          ls -la Pods | head -20 || true
+          echo "🔐 Verificando certificados:"
+          security find-identity -v -p codesigning /Users/runner/Library/Keychains/build.keychain-db || true
+          echo "📱 Verificando provisioning profiles:"
+          ls -la ~/Library/MobileDevice/Provisioning\ Profiles/ || true
+          echo "📋 Verificando configuración del proyecto:"
+          xcodebuild -workspace Zenti.xcworkspace -scheme Zenti -showBuildSettings 2>&1 | grep -E "IPHONEOS_DEPLOYMENT_TARGET|CODE_SIGN|PROVISIONING_PROFILE" | head -20 || true
+          echo "✅ Verificación de configuración completada"
+
       - name: 🚀 Build y subir a TestFlight con Fastlane
         timeout-minutes: 90
         env:
@@ -111,20 +129,52 @@ jobs:
           CI: "true"
           FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT: "120"
           FASTLANE_XCODEBUILD_SETTINGS_RETRIES: "3"
+          FASTLANE_SKIP_UPDATE_CHECK: "true"
         run: |
           cd ios
-          bundle exec fastlane beta
+          # Ejecutar fastlane con salida completa y guardar en archivo
+          bundle exec fastlane beta 2>&1 | tee fastlane_output.log
+          # Si falla, mostrar las últimas líneas del log
+          if [ ${PIPESTATUS[0]} -ne 0 ]; then
+            echo "❌ Fastlane falló. Últimas 100 líneas del log:"
+            tail -100 fastlane_output.log || true
+            exit 1
+          fi
 
-      - name: 🔍 Mostrar logs de Fastlane si existen
+      - name: 🔍 Mostrar logs de error completos
         if: failure()
         run: |
+          echo "📋 Mostrando logs de error..."
+          if [ -f "ios/fastlane_output.log" ]; then
+            echo "📄 Últimas 500 líneas de fastlane_output.log:"
+            tail -500 ios/fastlane_output.log || true
+          fi
           if [ -d "/Users/runner/Library/Logs/gym" ]; then
-            ls -l /Users/runner/Library/Logs/gym
-            cat /Users/runner/Library/Logs/gym/*.log || true
+            echo "📦 Logs de gym:"
+            ls -lR /Users/runner/Library/Logs/gym || true
+            echo "📄 Buscando errores en los logs de gym:"
+            find /Users/runner/Library/Logs/gym -name "*.log" -type f | while read logfile; do
+              echo "=== $logfile ==="
+              # Mostrar líneas con "error:", "Error:", "failed", "Failed"
+              grep -i -A 5 -B 5 "error:\|Error:\|failed\|Failed" "$logfile" | tail -100 || true
+            done
+            # Mostrar las últimas líneas de cada log
+            find /Users/runner/Library/Logs/gym -name "*.log" -type f -exec sh -c 'echo "=== {} ==="; tail -200 {}' \; || true
+          fi
+          if [ -d "ios/build/logs" ]; then
+            echo "📦 Logs de build:"
+            ls -lR ios/build/logs || true
+            find ios/build/logs -name "*.log" -type f -exec sh -c 'echo "=== {} ==="; tail -200 {}' \; || true
           fi
           if [ -d "ios/fastlane/logs" ]; then
-            ls -l ios/fastlane/logs
-            cat ios/fastlane/logs/*.log || true
+            echo "📦 Logs de fastlane:"
+            ls -l ios/fastlane/logs || true
+            find ios/fastlane/logs -name "*.log" -type f -exec tail -200 {} \; || true
+          fi
+          # Mostrar información del build si existe
+          if [ -d "ios/build" ]; then
+            echo "📦 Contenido del directorio build:"
+            ls -la ios/build || true
           fi
 
       - name: 🧹 Limpiar Keychain
@@ -133,12 +183,40 @@ jobs:
           security delete-keychain build.keychain || true
           security list-keychains -s login.keychain || true
 
-      - name: 💾 Guardar log de Fastlane
+      - name: 💾 Guardar logs y artifacts
+        if: always()
+        run: |
+          echo "💾 Guardando logs..."
+          mkdir -p artifacts
+          
+          # Copiar logs de fastlane
+          if [ -f "ios/fastlane_output.log" ]; then
+            cp ios/fastlane_output.log artifacts/ || true
+          fi
+          
+          # Copiar logs de gym
+          if [ -d "/Users/runner/Library/Logs/gym" ]; then
+            cp -r /Users/runner/Library/Logs/gym artifacts/gym_logs || true
+          fi
+          
+          # Copiar logs de fastlane
+          if [ -d "ios/fastlane/logs" ]; then
+            cp -r ios/fastlane/logs artifacts/fastlane_logs || true
+          fi
+          
+          # Copiar logs de build
+          if [ -d "ios/build/logs" ]; then
+            cp -r ios/build/logs artifacts/build_logs || true
+          fi
+          
+          # Mostrar tamaño de los logs
+          du -sh artifacts/* 2>/dev/null || true
+
+      - name: 📤 Subir artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: fastlane-gym-log
-          path: |
-            /Users/runner/Library/Logs/gym
-            ios/fastlane/logs
+          name: build-logs-and-artifacts
+          path: artifacts
           if-no-files-found: warn
+          retention-days: 7

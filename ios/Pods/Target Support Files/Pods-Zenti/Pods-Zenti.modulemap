@@ -1,0 +1,6 @@
+module Pods_Zenti {
+  umbrella header "Pods-Zenti-umbrella.h"
+
+  export *
+  module * { export * }
+}

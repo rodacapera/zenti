@@ -6,6 +6,14 @@ platform :ios do
   lane :beta do
     UI.message("🚀 Compilando la app Zenti con Fastlane")
 
+    # 🔐 Configurar keychain si estamos en CI
+    if ENV["CI"] == "true"
+      UI.message("🔐 Configurando keychain para CI...")
+      # Asegurar que el keychain esté desbloqueado y configurado correctamente
+      sh("security unlock-keychain -p '' build.keychain || true")
+      sh("security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k '' build.keychain || true")
+    end
+
     # 🔐 Descargar certificados y perfiles
     match(
       type: "appstore",
@@ -16,28 +24,57 @@ platform :ios do
       git_basic_authorization: ENV["MATCH_GIT_BASIC_AUTHORIZATION"],
       readonly: true,
       keychain_name: "build.keychain",
-      keychain_password: ""
+      keychain_password: "",
+      verbose: true
     )
 
+    # 🧹 Limpiar build anterior y DerivedData
+    UI.message("🧹 Limpiando build anterior...")
+    sh("rm -rf build/*.xcarchive build/*.ipa || true")
+    # Limpiar DerivedData para evitar problemas de compilación
+    if ENV["CI"] == "true"
+      UI.message("🧹 Limpiando DerivedData en CI...")
+      sh("rm -rf ~/Library/Developer/Xcode/DerivedData/Zenti-* || true")
+    end
+    
     # 🏗️ Construcción de la app
-    build_app(
-      workspace: "Zenti.xcworkspace",
-      scheme: "Zenti",
-      export_method: "app-store",
-      export_options: {
-        provisioningProfiles: {
-          "com.teranov.zentiapp" => "match AppStore com.teranov.zentiapp"
+    begin
+      build_app(
+        workspace: "Zenti.xcworkspace",
+        scheme: "Zenti",
+        export_method: "app-store",
+        clean: true, # Limpiar antes de construir
+        export_options: {
+          provisioningProfiles: {
+            "com.teranov.zentiapp" => "match AppStore com.teranov.zentiapp"
+          },
+          method: "app-store",
+          signingStyle: "manual",
+          teamID: ENV["APPLE_DEVELOPMENT_TEAM_ID"],
+          compileBitcode: false, # 🚀 Desactivado para acelerar
+          uploadSymbols: true,
+          stripSwiftSymbols: true
         },
-        method: "app-store",
-        signingStyle: "manual",
-        teamID: ENV["APPLE_DEVELOPMENT_TEAM_ID"],
-        compileBitcode: false, # 🚀 Desactivado para acelerar
-        uploadSymbols: true,
-        stripSwiftSymbols: true
-      },
-      output_directory: "build",
-      export_team_id: ENV["APPLE_DEVELOPMENT_TEAM_ID"]
-    )
+        output_directory: "build",
+        export_team_id: ENV["APPLE_DEVELOPMENT_TEAM_ID"],
+        codesigning_identity: "Apple Distribution",
+        skip_profile_detection: false,
+        xcargs: "CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=#{ENV['APPLE_DEVELOPMENT_TEAM_ID']} GCC_WARN_INHIBIT_ALL_WARNINGS=YES CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER=NO",
+        build_path: "./build",
+        silent: false,
+        suppress_xcode_output: false,
+        buildlog_path: "./build/logs"
+      )
+    rescue => ex
+      UI.error("❌ Error al construir la app: #{ex.message}")
+      UI.error("📋 Ver detalles completos en: ./build/logs")
+      # Mostrar últimas líneas del log si existe
+      if File.exist?("./build/logs")
+        UI.message("📄 Últimas líneas del log de build:")
+        sh("find ./build/logs -name '*.log' -type f -exec tail -50 {} \\; || true")
+      end
+      raise ex
+    end
 
     # ☁️ Subir a TestFlight
     UI.message("☁️ Subiendo a TestFlight para #{ENV["APPLE_ID"]}")

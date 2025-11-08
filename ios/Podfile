@@ -41,11 +41,53 @@ target 'Zenti' do
       # :ccache_enabled => true
     )
     
-    # Asegurar que todos los pods tengan la configuración correcta de módulos
+    # Configurar deployment target mínimo y módulos para todos los pods
     installer.pods_project.targets.each do |target|
       target.build_configurations.each do |config|
+        # Forzar deployment target mínimo a 12.0 (requerido por Xcode moderno)
+        if config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f < 12.0
+          config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '12.0'
+        end
+        
         # Asegurar que CLANG_ENABLE_MODULES esté habilitado para todos los pods
         config.build_settings['CLANG_ENABLE_MODULES'] = 'YES'
+        
+        # Configurar Swift version si es necesario
+        if target.respond_to?(:product_type) and target.product_type == "com.apple.product-type.bundle"
+          config.build_settings['SWIFT_VERSION'] = '5.0'
+        end
+        
+        # Configuración específica para pods problemáticos de gRPC/BoringSSL
+        if target.name.start_with?('BoringSSL') || target.name.start_with?('gRPC')
+          # Desactivar warnings como errores para estos pods
+          config.build_settings['GCC_TREAT_WARNINGS_AS_ERRORS'] = 'NO'
+          config.build_settings['WARNING_CFLAGS'] = '-Wno-shorten-64-to-32 -Wno-comma -Wno-unreachable-code -Wno-format'
+          
+          # Configurar estándar C++ (BoringSSL requiere C++14 o superior)
+          config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17'
+          config.build_settings['CLANG_CXX_LIBRARY'] = 'libc++'
+          
+          # Desactivar bitcode explícitamente (ya lo tenemos desactivado globalmente)
+          config.build_settings['ENABLE_BITCODE'] = 'NO'
+          
+          # Configuración específica para BoringSSL-GRPC
+          if target.name == 'BoringSSL-GRPC'
+            # Agregar definiciones del preprocesador de forma segura
+            existing_defs = config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] || ['$(inherited)']
+            existing_defs = [existing_defs] if existing_defs.is_a?(String)
+            existing_defs << 'OPENSSL_NO_ASM=1' unless existing_defs.include?('OPENSSL_NO_ASM=1')
+            config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] = existing_defs
+            
+            # Optimización más baja en CI para evitar problemas de tiempo
+            if ENV['CI'] == 'true'
+              config.build_settings['GCC_OPTIMIZATION_LEVEL'] = '0'
+            end
+            
+            # Configuración adicional para evitar errores de compilación
+            config.build_settings['CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER'] = 'NO'
+            config.build_settings['USE_HEADERMAP'] = 'NO'
+          end
+        end
       end
     end
   end
