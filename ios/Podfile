@@ -8,6 +8,10 @@ require Pod::Executable.execute_command('node', ['-p',
 platform :ios, min_ios_version_supported
 prepare_react_native_project!
 
+# Habilitar modular headers globalmente para Firebase y dependencias Swift
+# Esto es necesario para que los pods Swift funcionen como librerías estáticas
+use_modular_headers!
+
 ## Desactivar Hermes en CI para evitar el script que falla en GitHub Actions
 hermes_enabled = ENV['CI'] == 'true' ? false : true
 
@@ -36,5 +40,13 @@ target 'Zenti' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+    
+    # Asegurar que todos los pods tengan la configuración correcta de módulos
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        # Asegurar que CLANG_ENABLE_MODULES esté habilitado para todos los pods
+        config.build_settings['CLANG_ENABLE_MODULES'] = 'YES'
+      end
+    end
   end
 end
