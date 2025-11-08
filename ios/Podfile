@@ -61,7 +61,7 @@ target 'Zenti' do
         if target.name.start_with?('BoringSSL') || target.name.start_with?('gRPC')
           # Desactivar warnings como errores para estos pods
           config.build_settings['GCC_TREAT_WARNINGS_AS_ERRORS'] = 'NO'
-          config.build_settings['WARNING_CFLAGS'] = '-Wno-shorten-64-to-32 -Wno-comma -Wno-unreachable-code -Wno-format'
+          config.build_settings['WARNING_CFLAGS'] = '-Wno-shorten-64-to-32 -Wno-comma -Wno-unreachable-code -Wno-format -Wno-everything'
           
           # Configurar estándar C++ (BoringSSL requiere C++14 o superior)
           config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17'
@@ -78,14 +78,21 @@ target 'Zenti' do
             existing_defs << 'OPENSSL_NO_ASM=1' unless existing_defs.include?('OPENSSL_NO_ASM=1')
             config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] = existing_defs
             
-            # Optimización más baja en CI para evitar problemas de tiempo
-            if ENV['CI'] == 'true'
-              config.build_settings['GCC_OPTIMIZATION_LEVEL'] = '0'
-            end
+            # Desactivar optimización de Swift completamente para este target
+            config.build_settings['SWIFT_OPTIMIZATION_LEVEL'] = '-Onone'
+            config.build_settings['SWIFT_COMPILATION_MODE'] = 'singlefile'
+            
+            # Optimización más baja para C/C++
+            config.build_settings['GCC_OPTIMIZATION_LEVEL'] = '0'
             
             # Configuración adicional para evitar errores de compilación
             config.build_settings['CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER'] = 'NO'
             config.build_settings['USE_HEADERMAP'] = 'NO'
+            config.build_settings['CLANG_WARN_DOCUMENTATION_COMMENTS'] = 'NO'
+            config.build_settings['CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING'] = 'NO'
+            
+            # Desactivar módulos Swift para evitar problemas de previews
+            config.build_settings['SWIFT_ENABLE_PREVIEWS'] = 'NO'
           end
         end
       end

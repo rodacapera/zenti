@@ -68,10 +68,20 @@ platform :ios do
     rescue => ex
       UI.error("❌ Error al construir la app: #{ex.message}")
       UI.error("📋 Ver detalles completos en: ./build/logs")
-      # Mostrar últimas líneas del log si existe
-      if File.exist?("./build/logs")
-        UI.message("📄 Últimas líneas del log de build:")
-        sh("find ./build/logs -name '*.log' -type f -exec tail -50 {} \\; || true")
+      
+      # Buscar y mostrar el error real del log
+      log_path = "./build/logs/Zenti-Zenti.log"
+      if File.exist?(log_path)
+        UI.message("📄 Buscando errores en el log de xcodebuild...")
+        # Buscar líneas con "error:", "failed", "FAILED"
+        sh("grep -i -A 10 -B 5 'error:\\|failed\\|FAILED' #{log_path} | tail -100 || true")
+        UI.message("📄 Últimas 100 líneas del log completo:")
+        sh("tail -100 #{log_path} || true")
+      else
+        # Buscar en otros posibles lugares
+        UI.message("📄 Buscando logs en otros lugares...")
+        sh("find ./build/logs -name '*.log' -type f -exec sh -c 'echo \"=== {} ===\"; tail -100 {}' \\; || true")
+        sh("find /Users/runner/Library/Logs/gym -name '*.log' -type f -exec sh -c 'echo \"=== {} ===\"; tail -100 {}' \\; 2>/dev/null || true")
       end
       raise ex
     end
