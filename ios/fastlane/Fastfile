@@ -39,8 +39,13 @@ platform :ios do
     
     # 🏗️ Construcción de la app
     begin
-      # Crear directorio de logs si no existe
-      sh("mkdir -p ./build/logs || true")
+      # Crear directorio de logs si no existe (usar ruta absoluta)
+      workspace_root = Dir.pwd
+      logs_dir = "#{workspace_root}/build/logs"
+      sh("mkdir -p #{logs_dir} || true")
+      
+      UI.message("🏗️ Iniciando build...")
+      UI.message("📂 Logs se guardarán en: #{logs_dir}")
       
       build_app(
         workspace: "Zenti.xcworkspace",
@@ -66,54 +71,69 @@ platform :ios do
         build_path: "./build",
         silent: false,
         suppress_xcode_output: false,
-        buildlog_path: "./build/logs"
+        buildlog_path: logs_dir, # Usar ruta absoluta
+        disable_xcpretty: true # Desactivar xcpretty/xcbeautify para ver el output completo sin formateo
       )
     rescue => ex
       UI.error("❌ Error al construir la app: #{ex.message}")
-      UI.error("📋 Ver detalles completos en: ./build/logs")
       
-      # Buscar y mostrar el error real del log
-      UI.message("🔍 Buscando logs de xcodebuild...")
+      # Buscar el log en todos los lugares posibles INMEDIATAMENTE después del error
+      UI.message("🔍 Buscando logs inmediatamente después del error...")
       
-      # Primero buscar en build/logs (donde lo estamos guardando)
+      # Primero, verificar si el log que fastlane menciona existe (ruta absoluta)
+      workspace_root = Dir.pwd
+      fastlane_log_path = "#{workspace_root}/build/logs/Zenti-Zenti.log"
+      if File.exist?(fastlane_log_path)
+        UI.message("✅ Encontrado log en: #{fastlane_log_path}")
+        UI.message("📏 Tamaño: #{File.size(fastlane_log_path)} bytes")
+        UI.message("--- ERRORES ENCONTRADOS ---")
+        sh("grep -i -E 'error:|failed|FAILED|CompileC.*failed|The following build commands failed' '#{fastlane_log_path}' | tail -150 || true")
+        UI.message("--- ÚLTIMAS 600 LÍNEAS (donde están los errores) ---")
+        sh("tail -600 '#{fastlane_log_path}' || true")
+      else
+        UI.message("⚠️ El log en #{fastlane_log_path} no existe")
+      end
+      
+      # Buscar en build/logs relativo
       log_dir = "./build/logs"
       if Dir.exist?(log_dir)
         UI.message("📂 Buscando en #{log_dir}...")
-        log_files = Dir.glob("#{log_dir}/*.log")
+        sh("ls -lah #{log_dir} || true")
+        log_files = Dir.glob("#{log_dir}/**/*")
         if log_files.any?
           log_files.each do |log_file|
-            UI.message("📄 === Analizando: #{log_file} ===")
-            UI.message("📏 Tamaño: #{File.size(log_file) rescue 'N/A'} bytes")
-            # Mostrar errores
-            UI.message("--- ERRORES ENCONTRADOS ---")
-            sh("grep -i -E 'error:|failed|FAILED|CompileC.*failed|The following build commands failed|Command.*failed' '#{log_file}' | tail -100 || true")
-            # Mostrar últimas líneas (donde suelen estar los errores)
-            UI.message("--- ÚLTIMAS 400 LÍNEAS (errores finales) ---")
-            sh("tail -400 '#{log_file}' || true")
+            next unless File.file?(log_file)
+            UI.message("📄 Encontrado: #{log_file} (#{File.size(log_file)} bytes)")
+            if log_file.end_with?('.log') || log_file.include?('Zenti')
+              UI.message("--- ERRORES EN #{log_file} ---")
+              sh("grep -i -E 'error:|failed|FAILED|CompileC.*failed|The following build commands failed' '#{log_file}' | tail -150 || true")
+              UI.message("--- ÚLTIMAS 600 LÍNEAS DE #{log_file} ---")
+              sh("tail -600 '#{log_file}' || true")
+            end
           end
         else
-          UI.message("⚠️ No se encontraron archivos .log en #{log_dir}")
-          # Listar qué hay en el directorio
-          UI.message("Contenido del directorio:")
-          sh("ls -la #{log_dir} || true")
+          UI.message("⚠️ No hay archivos en #{log_dir}")
         end
-      else
-        UI.message("⚠️ El directorio #{log_dir} no existe")
       end
       
-      # También buscar en el directorio de gym (backup)
+      # Buscar en el directorio de gym (donde fastlane/gym guarda logs por defecto)
       gym_log_dir = "/Users/runner/Library/Logs/gym"
       if Dir.exist?(gym_log_dir)
-        UI.message("📂 Buscando también en #{gym_log_dir}...")
+        UI.message("📂 Buscando en #{gym_log_dir}...")
+        sh("ls -lah #{gym_log_dir} || true")
         log_files = Dir.glob("#{gym_log_dir}/**/*.log")
         if log_files.any?
           log_files.each do |log_file|
             UI.message("📄 Analizando: #{log_file}")
-            sh("grep -i -E 'error:|failed|FAILED|CompileC.*failed|The following build commands failed' '#{log_file}' | tail -100 || true")
-            sh("tail -300 '#{log_file}' || true")
+            sh("grep -i -E 'error:|failed|FAILED|CompileC.*failed|The following build commands failed' '#{log_file}' | tail -150 || true")
+            sh("tail -600 '#{log_file}' || true")
           end
         end
       end
+      
+      # Buscar en DerivedData donde xcodebuild guarda logs
+      UI.message("📂 Buscando en DerivedData (logs recientes)...")
+      sh("find ~/Library/Developer/Xcode/DerivedData -name '*.log' -type f -mmin -10 2>/dev/null | head -3 | while read f; do echo '=== $f ==='; grep -i -E 'error:|failed|FAILED' '$f' | tail -50; tail -300 '$f'; done || true")
       
       raise ex
     end
