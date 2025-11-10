@@ -32,6 +32,9 @@ target 'Zenti' do
     hermes_enabled: hermes_enabled
   )
 
+    # Forzar la inclusión explícita de Yoga desde ReactCommon para exponer correctamente los headers
+    pod 'Yoga', :path => "#{config[:reactNativePath]}/ReactCommon/yoga", :modular_headers => false
+
   post_install do |installer|
     # https://github.com/facebook/react-native/blob/main/packages/react-native/scripts/react_native_pods.rb#L197-L202
     react_native_post_install(
@@ -79,6 +82,20 @@ target 'Zenti' do
           global_hs << path unless global_hs.include?(path)
         end
         config.build_settings['HEADER_SEARCH_PATHS'] = global_hs
+
+        # Refuerzo específico para ReactCommon (incluye Yoga)
+        if target.name == 'ReactCommon'
+          rc_hs = config.build_settings['HEADER_SEARCH_PATHS'] || ['$(inherited)']
+          rc_hs = [rc_hs] if rc_hs.is_a?(String)
+          [
+            '$(PODS_ROOT)/../../node_modules/react-native/ReactCommon',
+            '$(PODS_ROOT)/../../node_modules/react-native/ReactCommon/yoga',
+            '$(PODS_ROOT)/Headers/Public/Yoga'
+          ].each do |path|
+            rc_hs << path unless rc_hs.include?(path)
+          end
+          config.build_settings['HEADER_SEARCH_PATHS'] = rc_hs
+        end
         
         # Configurar Swift version si es necesario
         if target.respond_to?(:product_type) and target.product_type == "com.apple.product-type.bundle"
@@ -156,6 +173,27 @@ target 'Zenti' do
             end
             config.build_settings['HEADER_SEARCH_PATHS'] = yoga_hs
           end
+        end
+      end
+    end
+
+    # Añadir rutas de headers también al target de la app (Zenti), no solo a Pods
+    installer.aggregate_targets.each do |aggregate|
+      aggregate.user_project.native_targets.each do |native_target|
+        next unless native_target.name == 'Zenti'
+        native_target.build_configurations.each do |config|
+          app_hs = config.build_settings['HEADER_SEARCH_PATHS'] || ['$(inherited)']
+          app_hs = [app_hs] if app_hs.is_a?(String)
+          [
+            '$(SRCROOT)/../node_modules/react-native/ReactCommon',
+            '$(SRCROOT)/../node_modules/react-native/ReactCommon/yoga',
+            '$(PODS_ROOT)/Headers/Public/Yoga',
+            '$(PODS_ROOT)/Headers/Public/React',
+            '$(PODS_ROOT)/Headers/Public'
+          ].each do |path|
+            app_hs << path unless app_hs.include?(path)
+          end
+          config.build_settings['HEADER_SEARCH_PATHS'] = app_hs
         end
       end
     end
