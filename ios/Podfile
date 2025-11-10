@@ -72,7 +72,9 @@ target 'Zenti' do
           '$(PODS_ROOT)/Headers/Private',
           '$(PODS_ROOT)/Headers/Public/Yoga',
           '$(PODS_ROOT)/Headers/Public/React',
-          '$(PODS_ROOT)/Headers/Public/ReactCommon'
+          '$(PODS_ROOT)/Headers/Public/ReactCommon',
+          '$(PODS_ROOT)/../../node_modules/react-native/ReactCommon',
+          '$(PODS_ROOT)/../../node_modules/react-native/ReactCommon/yoga'
         ].each do |path|
           global_hs << path unless global_hs.include?(path)
         end
@@ -135,6 +137,24 @@ target 'Zenti' do
             
             # Desactivar módulos Swift para evitar problemas de previews
             config.build_settings['SWIFT_ENABLE_PREVIEWS'] = 'NO'
+          end
+          
+          # Asegurar que Yoga exponga headers como módulo y tenga rutas correctas
+          if target.name == 'Yoga'
+            config.build_settings['DEFINES_MODULE'] = 'YES'
+            # Algunos setups requieren explicitar carpeta de headers públicos
+            config.build_settings['PUBLIC_HEADERS_FOLDER_PATH'] = 'include'
+            yoga_hs = config.build_settings['HEADER_SEARCH_PATHS'] || ['$(inherited)']
+            yoga_hs = [yoga_hs] if yoga_hs.is_a?(String)
+            [
+              '$(PODS_ROOT)/Headers/Public/Yoga',
+              '$(PODS_ROOT)/Headers/Private/Yoga',
+              '$(PODS_TARGET_SRCROOT)',
+              '$(PODS_ROOT)/../../node_modules/react-native/ReactCommon/yoga'
+            ].each do |path|
+              yoga_hs << path unless yoga_hs.include?(path)
+            end
+            config.build_settings['HEADER_SEARCH_PATHS'] = yoga_hs
           end
         end
       end
