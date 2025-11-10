@@ -64,6 +64,19 @@ target 'Zenti' do
           existing_cpp_flags << flag unless existing_cpp_flags.include?(flag)
         end
         config.build_settings['OTHER_CPLUSPLUSFLAGS'] = existing_cpp_flags
+        # Asegurar rutas de headers clave de RN/Yoga
+        global_hs = config.build_settings['HEADER_SEARCH_PATHS'] || ['$(inherited)']
+        global_hs = [global_hs] if global_hs.is_a?(String)
+        [
+          '$(PODS_ROOT)/Headers/Public',
+          '$(PODS_ROOT)/Headers/Private',
+          '$(PODS_ROOT)/Headers/Public/Yoga',
+          '$(PODS_ROOT)/Headers/Public/React',
+          '$(PODS_ROOT)/Headers/Public/ReactCommon'
+        ].each do |path|
+          global_hs << path unless global_hs.include?(path)
+        end
+        config.build_settings['HEADER_SEARCH_PATHS'] = global_hs
         
         # Configurar Swift version si es necesario
         if target.respond_to?(:product_type) and target.product_type == "com.apple.product-type.bundle"
