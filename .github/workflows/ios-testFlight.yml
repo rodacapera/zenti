@@ -6,13 +6,13 @@ on:
     branches:
       - develop
     paths:
-      - 'ios/**'
-      - 'src/**'
-      - 'Podfile'
-      - 'Podfile.lock'
-      - 'package.json'
-      - 'yarn.lock'
-      - '.github/workflows/ios-testFlight.yml'
+      - "ios/**"
+      - "src/**"
+      - "Podfile"
+      - "Podfile.lock"
+      - "package.json"
+      - "yarn.lock"
+      - ".github/workflows/ios-testFlight.yml"
 
 jobs:
   build-and-upload-ios:
@@ -80,13 +80,20 @@ jobs:
           gem install bundler --silent
           bundle install --jobs 4 --retry 3 --quiet
 
+      - name: 🚫 Desactivar frameworks en CI
+        run: |
+          echo "USE_FRAMEWORKS=" >> $GITHUB_ENV
+
       - name: 📦 Limpiar e instalar Pods
         run: |
           cd ios
           # Limpiar Pods para forzar reinstalación con nueva configuración
+          pod deintegrate || true
           rm -rf Pods Podfile.lock
+          pod cache clean --all || true
           # Instalar Pods con la nueva configuración de deployment target
-          pod install --repo-update
+          pod repo update
+          pod install --clean-install --repo-update
 
       - name: 🚀 Bump version & build number
         run: |
@@ -103,7 +110,7 @@ jobs:
           security default-keychain -s build.keychain
           security unlock-keychain -p "" build.keychain
           security set-keychain-settings -t 3600 -u build.keychain
-          
+
           # Configurar para no pedir contraseña
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" build.keychain || true
 
@@ -140,7 +147,7 @@ jobs:
           set +e  # No salir inmediatamente en error
           bundle exec fastlane beta 2>&1 | tee fastlane_output.log
           FASTLANE_EXIT_CODE=${PIPESTATUS[0]}
-          
+
           if [ $FASTLANE_EXIT_CODE -ne 0 ]; then
             echo "❌ Fastlane falló con código $FASTLANE_EXIT_CODE"
             echo ""
@@ -209,7 +216,7 @@ jobs:
         run: |
           echo "📋 Mostrando logs de error completos..."
           echo ""
-          
+
           # Buscar y leer el log de xcodebuild
           echo "=== BUSCANDO LOG DE XCODEBUILD ==="
           if [ -d "ios/build/logs" ]; then
@@ -234,7 +241,7 @@ jobs:
               fi
             done
           fi
-          
+
           # También buscar en fastlane_output.log
           if [ -f "ios/fastlane_output.log" ]; then
             echo "=== FASTLANE OUTPUT LOG ==="
@@ -242,7 +249,7 @@ jobs:
             tail -300 ios/fastlane_output.log || true
             echo ""
           fi
-          
+
           # Buscar en gym logs
           if [ -d "/Users/runner/Library/Logs/gym" ]; then
             echo "=== GYM LOGS ==="
@@ -264,13 +271,13 @@ jobs:
         run: |
           echo "💾 Guardando logs y artifacts..."
           mkdir -p artifacts
-          
+
           # Copiar logs de fastlane
           if [ -f "ios/fastlane_output.log" ]; then
             echo "📋 Copiando fastlane_output.log..."
             cp ios/fastlane_output.log artifacts/ || true
           fi
-          
+
           # Copiar logs de build (el más importante)
           if [ -d "ios/build/logs" ]; then
             echo "📋 Copiando logs de build..."
@@ -285,19 +292,19 @@ jobs:
             cp -r ios/fastlane/build/logs artifacts/fastlane_build_logs || true
             find ios/fastlane/build/logs -name "*.log" -type f -exec cp {} artifacts/ \; || true
           fi
-          
+
           # Copiar logs de gym
           if [ -d "/Users/runner/Library/Logs/gym" ]; then
             echo "📋 Copiando logs de gym..."
             cp -r /Users/runner/Library/Logs/gym artifacts/gym_logs || true
           fi
-          
+
           # Copiar logs de fastlane
           if [ -d "ios/fastlane/logs" ]; then
             echo "📋 Copiando logs de fastlane..."
             cp -r ios/fastlane/logs artifacts/fastlane_logs || true
           fi
-          
+
           # Mostrar qué se guardó
           echo "📦 Contenido de artifacts:"
           ls -lhR artifacts/ || true
