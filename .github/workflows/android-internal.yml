@@ -155,6 +155,16 @@ jobs:
           fi
           echo "=== Verificando archivos de build ==="
           ls -la android/app/build/outputs/bundle/release/ 2>/dev/null || echo "❌ No se encontró el directorio de outputs"
+      
+      - name: 📤 Subir artifacts (logs y .aab si existe)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-internal-artifacts
+          path: |
+            android/gradle_build.log
+            android/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: warn
 
       # 12. Decodificar service-account.json
       - name: 📄 Decodificar service-account.json
