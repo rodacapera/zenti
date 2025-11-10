@@ -69,6 +69,21 @@ target 'Zenti' do
           
           # Desactivar bitcode explícitamente (ya lo tenemos desactivado globalmente)
           config.build_settings['ENABLE_BITCODE'] = 'NO'
+          # Permitir includes no modulares dentro de módulos de framework (evita fallas de módulo)
+          config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+          # Asegurar header maps para que CocoaPods genere/sincronice Headers/Private y Public correctamente
+          config.build_settings['USE_HEADERMAP'] = 'YES'
+          # Asegurar que los pods de gRPC definan módulo para que exista su modulemap
+          if ['gRPC-Core', 'gRPC-C++', 'BoringSSL-GRPC'].include?(target.name)
+            config.build_settings['DEFINES_MODULE'] = 'YES'
+          end
+          # Asegurar rutas de búsqueda de headers públicas y privadas (por si Xcode no las hereda)
+          existing_hs = config.build_settings['HEADER_SEARCH_PATHS'] || ['$(inherited)']
+          existing_hs = [existing_hs] if existing_hs.is_a?(String)
+          ['$(PODS_ROOT)/Headers/Public', '$(PODS_ROOT)/Headers/Private'].each do |path|
+            existing_hs << path unless existing_hs.include?(path)
+          end
+          config.build_settings['HEADER_SEARCH_PATHS'] = existing_hs
           
           # Configuración específica para BoringSSL-GRPC
           if target.name == 'BoringSSL-GRPC'
@@ -87,7 +102,8 @@ target 'Zenti' do
             
             # Configuración adicional para evitar errores de compilación
             config.build_settings['CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER'] = 'NO'
-            config.build_settings['USE_HEADERMAP'] = 'NO'
+            # Mantener header maps activos
+            config.build_settings['USE_HEADERMAP'] = 'YES'
             config.build_settings['CLANG_WARN_DOCUMENTATION_COMMENTS'] = 'NO'
             config.build_settings['CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING'] = 'NO'
             
