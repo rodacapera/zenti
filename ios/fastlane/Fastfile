@@ -6,6 +6,15 @@ platform :ios do
   lane :beta do
     UI.message("🚀 Compilando la app Zenti con Fastlane")
 
+    # 📌 Forzar Xcode 16.2 para evitar ambigüedad de versión en runners con múltiples Xcodes
+    begin
+      xcode_select("/Applications/Xcode_16.2.app")
+      ENV["DEVELOPER_DIR"] = "/Applications/Xcode_16.2.app/Contents/Developer"
+      UI.message("📌 Xcode seleccionado: #{sh('xcodebuild -version | head -n 1').strip}")
+    rescue => e
+      UI.important("⚠️ No se pudo fijar Xcode vía xcode_select: #{e}")
+    end
+
     # 🔐 Configurar keychain si estamos en CI
     if ENV["CI"] == "true"
       UI.message("🔐 Configurando keychain para CI...")
