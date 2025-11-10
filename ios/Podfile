@@ -58,15 +58,27 @@ target 'Zenti' do
         config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] || 'c++17'
         config.build_settings['CLANG_CXX_LIBRARY'] = 'libc++'
         config.build_settings['GCC_C_LANGUAGE_STANDARD'] = 'gnu11'
+        # Permitir includes no modulares globalmente (evita fallas con headers de RN/Yoga/grpc)
+        config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
         # Habilitar header maps globalmente
         config.build_settings['USE_HEADERMAP'] = 'YES'
         # Bandera de compatibilidad de libc++ para símbolos removidos en C++17 (evita errores en headers estándar)
         existing_cpp_flags = config.build_settings['OTHER_CPLUSPLUSFLAGS'] || ['$(inherited)']
         existing_cpp_flags = [existing_cpp_flags] if existing_cpp_flags.is_a?(String)
-        ['-D_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES'].each do |flag|
+        ['-D_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES',
+         '-I$(SRCROOT)/../node_modules/react-native/ReactCommon',
+         '-I$(SRCROOT)/../node_modules/react-native/ReactCommon/yoga'].each do |flag|
           existing_cpp_flags << flag unless existing_cpp_flags.include?(flag)
         end
         config.build_settings['OTHER_CPLUSPLUSFLAGS'] = existing_cpp_flags
+        # Añadir -I también a OTHER_CFLAGS (para compilación C/ObjC)
+        existing_c_flags = config.build_settings['OTHER_CFLAGS'] || ['$(inherited)']
+        existing_c_flags = [existing_c_flags] if existing_c_flags.is_a?(String)
+        ['-I$(SRCROOT)/../node_modules/react-native/ReactCommon',
+         '-I$(SRCROOT)/../node_modules/react-native/ReactCommon/yoga'].each do |flag|
+          existing_c_flags << flag unless existing_c_flags.include?(flag)
+        end
+        config.build_settings['OTHER_CFLAGS'] = existing_c_flags
         # Asegurar rutas de headers clave de RN/Yoga
         global_hs = config.build_settings['HEADER_SEARCH_PATHS'] || ['$(inherited)']
         global_hs = [global_hs] if global_hs.is_a?(String)
