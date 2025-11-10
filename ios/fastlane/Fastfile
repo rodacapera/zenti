@@ -40,8 +40,8 @@ platform :ios do
     # 🏗️ Construcción de la app
     begin
       # Crear directorio de logs si no existe (usar ruta absoluta)
-      workspace_root = Dir.pwd
-      logs_dir = "#{workspace_root}/build/logs"
+      ios_root = File.expand_path('..', Dir.pwd)
+      logs_dir = "#{ios_root}/build/logs"
       sh("mkdir -p #{logs_dir} || true")
       
       UI.message("🏗️ Iniciando build...")
@@ -81,8 +81,7 @@ platform :ios do
       UI.message("🔍 Buscando logs inmediatamente después del error...")
       
       # Primero, verificar si el log que fastlane menciona existe (ruta absoluta)
-      workspace_root = Dir.pwd
-      fastlane_log_path = "#{workspace_root}/build/logs/Zenti-Zenti.log"
+      fastlane_log_path = "#{logs_dir}/Zenti-Zenti.log"
       if File.exist?(fastlane_log_path)
         UI.message("✅ Encontrado log en: #{fastlane_log_path}")
         UI.message("📏 Tamaño: #{File.size(fastlane_log_path)} bytes")
@@ -95,11 +94,10 @@ platform :ios do
       end
       
       # Buscar en build/logs relativo
-      log_dir = "./build/logs"
-      if Dir.exist?(log_dir)
-        UI.message("📂 Buscando en #{log_dir}...")
-        sh("ls -lah #{log_dir} || true")
-        log_files = Dir.glob("#{log_dir}/**/*")
+      if Dir.exist?(logs_dir)
+        UI.message("📂 Buscando en #{logs_dir}...")
+        sh("ls -lah #{logs_dir} || true")
+        log_files = Dir.glob("#{logs_dir}/**/*")
         if log_files.any?
           log_files.each do |log_file|
             next unless File.file?(log_file)
@@ -112,7 +110,7 @@ platform :ios do
             end
           end
         else
-          UI.message("⚠️ No hay archivos en #{log_dir}")
+          UI.message("⚠️ No hay archivos en #{logs_dir}")
         end
       end
       

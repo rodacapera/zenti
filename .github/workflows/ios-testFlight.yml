@@ -147,7 +147,7 @@ jobs:
             tail -200 fastlane_output.log || true
             echo ""
             echo "=== Buscando logs de xcodebuild ==="
-            # Leer el log directamente desde build/logs
+            # Leer el log directamente desde build/logs (ios) o fastlane/build/logs
             LOG_FILE="ios/build/logs/Zenti-Zenti.log"
             if [ -f "$LOG_FILE" ]; then
               echo "✅ Encontrado log en: $LOG_FILE"
@@ -173,6 +173,18 @@ jobs:
                 tail -200 "$f" || true
                 echo ""
               done
+              # Buscar en ios/fastlane/build/logs
+              if [ -d "ios/fastlane/build/logs" ]; then
+                echo "📂 Contenido de ios/fastlane/build/logs:"
+                ls -lh ios/fastlane/build/logs/ || true
+                find ios/fastlane/build/logs -name "*.log" -type f 2>/dev/null | head -5 | while read f; do
+                  echo "=== Archivo encontrado: $f ==="
+                  ls -lh "$f" || true
+                  echo "=== Últimas 200 líneas de $f ==="
+                  tail -200 "$f" || true
+                  echo ""
+                done
+              fi
             fi
             # Buscar en el directorio de gym también
             if [ -d "/Users/runner/Library/Logs/gym" ]; then
@@ -261,6 +273,13 @@ jobs:
             cp -r ios/build/logs artifacts/build_logs || true
             # También copiar el log completo si existe
             find ios/build/logs -name "*.log" -type f -exec cp {} artifacts/ \; || true
+          fi
+          # Copiar logs si se generaron en ios/fastlane/build/logs
+          if [ -d "ios/fastlane/build/logs" ]; then
+            echo "📋 Copiando logs desde ios/fastlane/build/logs..."
+            mkdir -p artifacts/fastlane_build_logs
+            cp -r ios/fastlane/build/logs artifacts/fastlane_build_logs || true
+            find ios/fastlane/build/logs -name "*.log" -type f -exec cp {} artifacts/ \; || true
           fi
           
           # Copiar logs de gym
