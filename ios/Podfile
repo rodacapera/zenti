@@ -33,7 +33,7 @@ target 'Zenti' do
   )
 
     # Forzar la inclusión explícita de Yoga desde ReactCommon para exponer correctamente los headers
-    pod 'Yoga', :path => "#{config[:reactNativePath]}/ReactCommon/yoga", :modular_headers => false
+    pod 'Yoga', :path => "#{config[:reactNativePath]}/ReactCommon/yoga", :modular_headers => true
 
   post_install do |installer|
     # https://github.com/facebook/react-native/blob/main/packages/react-native/scripts/react_native_pods.rb#L197-L202
